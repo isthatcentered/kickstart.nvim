@@ -11,7 +11,7 @@ end
 
 local function handleBufferChanged(buffer)
   if not shouldSave(buffer) then
-    vim.print 'Do no save buffer'
+    -- vim.print 'Do no save buffer'
     return
   end
 
