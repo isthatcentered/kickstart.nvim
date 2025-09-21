@@ -4,6 +4,7 @@ return {
     ROOT = {"."},
     pattern = ".*_spec%.lua$",
     lpath = "lua/?.lua;lua/?/init.lua",
-    lua = "nlua"
+    lua = "nlua",
+    output = "TAP"  -- Options: "TAP", "junit", "json", "spec" or leave blank for default
   }
 }
