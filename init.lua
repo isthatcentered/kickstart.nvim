@@ -349,3 +349,5 @@ vim.api.nvim_create_autocmd('VimEnter', {
   -- HACK: need to enable `nested` otherwise the current buffer will not have a filetype(no syntax)
   nested = true,
 })
+local custom_lsp_handler = require("isthatcentered.vtsls.hello")
+custom_lsp_handler.setup()

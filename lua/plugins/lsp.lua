@@ -150,7 +150,11 @@ local LSP = {
 
     vim.lsp.config('vtsls', {
       settings = {
+        vtsls = {
+          enableMoveToFileCodeAction = true,
+        },
         typescript = {
+          updateImportsOnFileMove = 'always',
           preferences = {
             importModuleSpecifier = 'relative',
           },
