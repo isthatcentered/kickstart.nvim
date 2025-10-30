@@ -1,5 +1,4 @@
 -- Basic settings
-vim.o.termguicolors = true
 vim.opt.number = true -- Line numbers
 vim.opt.relativenumber = true -- Relative line numbers
 vim.opt.cursorline = true -- Highlight current line
@@ -230,35 +229,142 @@ end, {})
 vim.keymap.set('n', '<M-w>', ':BufferClose<cr>', { desc = 'Close current buffer while keeping window open' })
 vim.keymap.set('n', '<M-W>', ':BufferOpenLastClosed<cr>', { desc = 'Open last closed buffer' })
 
+local lsp_utils = require 'isthatcentered.utils.lsp'
 vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
-  local bufferId = vim.api.nvim_get_current_buf()
+  local bufnr = vim.api.nvim_get_current_buf()
   local buffer = vim.bo
   local filetype = vim.bo.filetype
 
   require('conform').format { async = false }
 
-  if string.find(filetype, '^typescript') then
-    local client = vim.lsp.get_clients({ name = 'vtsls', bufnr = 0 })[1]
+  local typescript_vtsls_client = vim.lsp.get_clients({ name = 'vtsls', buffnr = bufnr })[1]
+  local typescript_ts_ls_client = vim.lsp.get_clients({ name = 'ts_ls', buffnr = bufnr })[1]
+  local eslint_client = vim.lsp.get_clients({ name = 'eslint', buffnr = bufnr })[1]
 
-    -- vim.lsp.buf.code_action { apply = true, context = { only = { 'source.addMissingImports' }, diagnostics = {} } }
-    vim.cmd 'LspEslintFixAll'
-
-    -- client:exec_cmd({
-    --   title = 'Sort imports',
-    --   command = 'typescript.sortImports',
-    --   arguments = {
-    --     vim.api.nvim_buf_get_name(bufferId),
-    --   },
-    -- }, { bufnr = vim.api.nvim_get_current_buf() })
-
-    -- client:exec_cmd({
-    --   title = 'Remove unused imports',
-    --   command = 'typescript.removeUnusedImports',
-    --   arguments = {
-    --     vim.api.nvim_buf_get_name(bufferId),
-    --   },
-    -- }, { bufnr = vim.api.nvim_get_current_buf() })
+  if not string.find(filetype, '^typescript') then
+    return
   end
+
+  if eslint_client and false then
+    eslint_client:request('workspace/executeCommand', {
+      command = 'eslint.applyAllFixes',
+      arguments = {
+        {
+          uri = vim.uri_from_bufnr(0),
+          version = vim.lsp.util.buf_versions[bufnr],
+        },
+      },
+    }, function(err)
+      if err then
+        vim.print(err)
+      end
+    end, bufnr)
+  end
+
+  if typescript_ts_ls_client then
+    -- {
+    -- "source.fixAll.ts",
+    -- "source.removeUnused.ts",
+    -- "source.addMissingImports.ts",
+    -- "source.organizeImports.ts",
+    -- "source.removeUnusedImports.ts",
+    -- "source.sortImports.ts",
+    -- "quickfix",
+    -- "refactor"
+
+    -- TODO: retry automatically until the diagnostics i'm interested in aren't solved
+    lsp_utils.run_code_actions {
+      bufnr = bufnr,
+      client = typescript_ts_ls_client,
+      kinds = { 'source.addMissingImports.ts' },
+      cb = function()
+        lsp_utils.run_code_actions {
+          bufnr = bufnr,
+          client = typescript_ts_ls_client,
+          kinds = { 'source.removeUnusedImports.ts' },
+          cb = function()
+            lsp_utils.run_code_actions {
+              bufnr = bufnr,
+              client = typescript_ts_ls_client,
+              kinds = { 'source.organizeImports.ts' },
+              cb = function()
+                if eslint_client and false then
+                  eslint_client:request('workspace/executeCommand', {
+                    command = 'eslint.applyAllFixes',
+                    arguments = {
+                      {
+                        uri = vim.uri_from_bufnr(0),
+                        version = vim.lsp.util.buf_versions[bufnr],
+                      },
+                    },
+                  }, function(err)
+                    if err then
+                      vim.print(err)
+                    end
+                  end, bufnr)
+                end
+              end,
+            }
+          end,
+        }
+      end,
+    }
+  end
+
+  if typescript_vtsls_client and false then
+    typescript_vtsls_client:exec_cmd({
+      title = 'Remove unused imports',
+      command = 'typescript.removeUnusedImports',
+      arguments = {
+        vim.api.nvim_buf_get_name(bufnr),
+      },
+    }, { bufnr = vim.api.nvim_get_current_buf() }, function()
+      typescript_vtsls_client:exec_cmd({
+        title = 'Sort imports',
+        command = 'typescript.sortImports',
+        arguments = {
+          vim.api.nvim_buf_get_name(bufnr),
+        },
+      }, { bufnr = vim.api.nvim_get_current_buf() }, function()
+        if not eslint_client then
+          return
+        end
+        eslint_client:request_sync('workspace/executeCommand', {
+          command = 'eslint.applyAllFixes',
+          arguments = {
+            {
+              uri = vim.uri_from_bufnr(0),
+              version = vim.lsp.util.buf_versions[bufnr],
+            },
+          },
+        }, nil, bufnr)
+      end)
+    end)
+  end
+
+  -- vim.lsp.buf.code_action { apply = true, context = { only = { 'source.addMissingImports' }, diagnostics = {} } }
+
+  -- if string.find(filetype, '^typescript') then
+  --   local client = vim.lsp.get_clients({ name = 'vtsls', bufnr = 0 })[1]
+  --
+  --   vim.cmd 'LspEslintFixAll'
+  --
+  --   -- client:exec_cmd({
+  --   --   title = 'Sort imports',
+  --   --   command = 'typescript.sortImports',
+  --   --   arguments = {
+  --   --     vim.api.nvim_buf_get_name(bufferId),
+  --   --   },
+  --   -- }, { bufnr = vim.api.nvim_get_current_buf() })
+  --
+  --   -- client:exec_cmd({
+  --   --   title = 'Remove unused imports',
+  --   --   command = 'typescript.removeUnusedImports',
+  --   --   arguments = {
+  --   --     vim.api.nvim_buf_get_name(bufferId),
+  --   --   },
+  --   -- }, { bufnr = vim.api.nvim_get_current_buf() })
+  -- end
 end, {})
 
 vim.api.nvim_create_user_command('IsThatCenteredImportAction', function()
@@ -331,7 +437,7 @@ local initialRenameHandler = vim.lsp.handlers['textDocument/rename']
 local blah2 = 123
 vim.lsp.handlers['textDocument/rename'] = function(...)
   initialRenameHandler(...)
-  vim.cmd("")
+  vim.cmd ''
   vim.notify 'Renamed:::'
 end
 
@@ -349,5 +455,5 @@ vim.api.nvim_create_autocmd('VimEnter', {
   -- HACK: need to enable `nested` otherwise the current buffer will not have a filetype(no syntax)
   nested = true,
 })
-local custom_lsp_handler = require("isthatcentered.vtsls.hello")
+local custom_lsp_handler = require 'isthatcentered.vtsls.hello'
 custom_lsp_handler.setup()

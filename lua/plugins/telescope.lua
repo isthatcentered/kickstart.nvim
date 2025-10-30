@@ -121,6 +121,8 @@ return {
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sb', builtin.buffers, { desc = '[S]earch opened [B]uffers' })
+      vim.keymap.set('n', '<leader>sH', builtin.oldfiles, { desc = '[S]earch opened [H]istory' })
+      vim.keymap.set('n', '<leader>sl', builtin.lsp_outgoing_calls, { desc = '[S]earch [L]sp outgoing calls' })
 
       -- Slightly advanced example of overriding default behavior and theme
       -- vim.keymap.set('n', '/', function()

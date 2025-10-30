@@ -69,6 +69,14 @@ local LSP = {
     {
       'saghen/blink.cmp',
 
+      dependencies = {
+        'L3MON4D3/LuaSnip',
+        -- follow latest release.
+        version = 'v2.*', -- Replace <CurrentMajor> by the latest released major (first number of latest release)
+        -- install jsregexp (optional!).
+        build = 'make install_jsregexp',
+      },
+
       build = 'cargo build --release',
 
       opts = {
@@ -83,6 +91,7 @@ local LSP = {
         -- C-k: Toggle signature help (if signature.enabled = true)
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
+
         keymap = {
           preset = 'enter',
           ['<C-s>'] = {
@@ -100,7 +109,14 @@ local LSP = {
         documentation = { auto_show = false, auto_show_delay_ms = 500, border = 'rounded', window = { border = 'rounded' } },
 
         completion = {
-          menu = { auto_show = true, border = 'rounded' },
+          menu = {
+            auto_show = true,
+            border = 'rounded',
+
+            -- draw = {
+            --   columns = { { 'label', 'label_description', gap = 1 }, { 'kind_icon', 'kind' } },
+            -- },
+          },
 
           documentation = {
             window = { border = 'rounded' },
@@ -128,6 +144,8 @@ local LSP = {
           },
         },
 
+        snippets = { preset = 'luasnip' },
+
         sources = {
           default = { 'lsp', 'path', 'snippets', 'buffer' },
         },
@@ -143,24 +161,58 @@ local LSP = {
       'lua_ls',
       'eslint',
       'biome',
-      -- 'ts_ls',
-      'vtsls',
+      'ts_ls',
+      -- 'vtsls',
       'jsonls',
     }
 
-    vim.lsp.config('vtsls', {
+    -- vim.lsp.config('vtsls', {
+    --   settings = {
+    --     vtsls = {
+    --       enableMoveToFileCodeAction = true,
+    --     },
+    --     typescript = {
+    --       updateImportsOnFileMove = 'always',
+    --       referencesCodeLens = {
+    --         enabled = true,
+    --         showOnAllFunctions = true,
+    --         showOnInterfaceMethods = true,
+    --       },
+    --       preferences = {
+    --         importModuleSpecifier = 'relative',
+    --       },
+    --     },
+    --   },
+    -- })
+
+    vim.lsp.config('ts_ls', {
       settings = {
-        vtsls = {
-          enableMoveToFileCodeAction = true,
+        supportsMoveToFileCodeAction = true,
+        -- https://github.com/typescript-language-server/typescript-language-server/blob/master/docs/configuration.md#preferences-options
+        preferences = {
+          importModuleSpecifierPreference = 'relative',
+          maximumHoverLength = 1000,
         },
-        typescript = {
-          updateImportsOnFileMove = 'always',
-          preferences = {
-            importModuleSpecifier = 'relative',
-          },
+      },
+      init_options = {
+        supportsMoveToFileCodeAction = true,
+        -- https://github.com/typescript-language-server/typescript-language-server/blob/master/docs/configuration.md#preferences-options
+        preferences = {
+          importModuleSpecifierPreference = 'relative',
+          maximumHoverLength = 1000,
         },
       },
     })
+
+    vim.lsp.commands['editor.action.showReferences'] = function(command, ctx)
+      local locations = command.arguments[3]
+      local client = vim.lsp.get_client_by_id(ctx.client_id)
+      if locations and #locations > 0 then
+        local items = vim.lsp.util.locations_to_items(locations, client.offset_encoding)
+        vim.fn.setloclist(0, {}, ' ', { title = 'References', items = items, context = ctx })
+        vim.api.nvim_command 'lopen'
+      end
+    end
 
     for _, ls in pairs(language_servers) do
       vim.lsp.enable(ls)

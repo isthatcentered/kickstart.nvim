@@ -1,10 +1,10 @@
 return {
   default = {
     verbose = true,
-    ROOT = {"."},
-    pattern = ".*_spec%.lua$",
-    lpath = "lua/?.lua;lua/?/init.lua",
-    lua = "nlua",
-    output = "TAP"  -- Options: "TAP", "junit", "json", "spec" or leave blank for default
-  }
+    ROOT = { '.' },
+    pattern = '.*_spec%.lua$',
+    lpath = 'lua/?.lua;lua/?/init.lua',
+    lua = 'nlua',
+    output = 'TAP', -- Options: "TAP", "junit", "json", "spec" or leave blank for default
+  },
 }

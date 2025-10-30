@@ -1,5 +1,4 @@
 --[[ DIAGNOSTICS ]]
---
 ---------------------
 -- DIagnostics navigation
 -- local pos_equal = function (p1, p2)
@@ -36,56 +35,168 @@ end, { desc = 'Next Diagnostic', noremap = true })
 vim.keymap.set('n', '<M-h>', ':cnext<cr>', { desc = 'Previous Quickfix' })
 vim.keymap.set('n', '<M-l>', ':cnext<cr>', { desc = 'Next Quickfix' })
 
-function shallowCopyTable(table)
-  local copy = {}
-  for key, value in pairs(table) do
-    copy[key] = value
+-- TODO: Use onPublishDiagnostics to cap eslint max severity. This avoids having to override every sign handler
+
+-- local originalPublishDiagnosticsHandler = vim.lsp.diagnostic.on_publish_diagnostics
+-- vim.lsp.diagnostic.on_publish_diagnostics = function (...)
+--   vim.print(...)
+--   originalPublishDiagnosticsHandler(...)
+--
+-- end
+
+-- local originalOnPublishDiagnosticsLSPHandler = vim.lsp.handlers['textDocument/publishDiagnostics']
+-- vim.lsp.handlers['textDocument/publishDiagnostics'] = function(err, result, ctx)
+--   local client = vim.lsp.get_client_by_id(ctx.client_id)
+--
+--   if not client then
+--     return
+--   end
+--   vim.print { name = client.name, isEslint = client.name == 'eslint', result, ctx }
+--   if not client or client.name ~= 'eslint' then
+--     return originalOnPublishDiagnosticsLSPHandler(err, result, ctx)
+--   end
+--
+--   -- vim.print({err, result, ctx})
+--   return originalOnPublishDiagnosticsLSPHandler(err, result, ctx)
+-- end
+--
+-- local autoCommandsGroup = vim.api.nvim_create_augroup('isthatcentered-lsp', { clear = true })
+--
+-- vim.api.nvim_create_autocmd('LspAttach', {
+--   group = autoCommandsGroup,
+--   callback = function(args)
+--     if not args.data and not args.data.client_id then
+--       return
+--     end
+--
+--     local client = vim.lsp.get_client_by_id(args.data.client_id)
+--     local bufnr = args.buf
+--
+--     if not client or client.name ~= 'eslint' then
+--       return
+--     end
+--   end,
+-- })
+--
+local ns = vim.api.nvim_create_namespace 'isthatcentered-diagnostics'
+
+---@param diagnostic vim.Diagnostic
+---@return boolean
+local function isLint(diagnostic)
+  return diagnostic.source == 'eslint'
+end
+
+---@alias DiagnosticTransform function(diagnostic: vim.Diagnostic): vim.Diagnostic?
+
+---@param severity vim.diagnostic.Severity
+local function onlyDiagnosticsOfSeverity(severity)
+  ---@type DiagnosticTransform
+  return function(diagnostic)
+    if diagnostic.severity == severity then
+      return diagnostic
+    else
+      return nil
+    end
   end
- return copy 
+end
+
+---@param original_handler any
+---@param customizeDiagnostics DiagnosticTransform[]
+---@return any
+local function withCustomizedDiagnostics(original_handler, customizeDiagnostics)
+  return {
+    show = function(_, bufnr, _, opts)
+      -- Get all diagnostics from the whole buffer rather than just the
+      -- diagnostics passed to the handler
+      local diagnostics = vim.diagnostic.get(bufnr)
+      local it = vim.iter(diagnostics)
+
+      for _, transformer in pairs(customizeDiagnostics) do
+        it:map(transformer)
+      end
+
+      it:filter(function(diagnostic)
+        return diagnostic
+      end)
+
+      local transformedDiagnostics = it:totable()
+
+      table.sort(transformedDiagnostics, function(a, b)
+        return a.severity < b.severity
+      end)
+
+      original_handler.show(ns, bufnr, transformedDiagnostics, opts)
+    end,
+    hide = function(_, bufnr)
+      original_handler.hide(ns, bufnr)
+    end,
+  }
 end
 
 --
--- local ns = vim.api.nvim_create_namespace 'isthatcentered_diagnostics'
--- local original_underline_handler = vim.diagnostic.handlers.underline
--- vim.diagnostic.handlers.underline = {
---   show = function(namespace, bufferId, diagnostics, opts)
---     ---@type vim.Diagnostic[]
---     local updatedDiagnostics = {}
---     for _, diagnostic in pairs(diagnostics) do
---       -- vim.print(diagnostic.source)
---       local isLinter = diagnostic.source == 'eslint' or diagnostic.source == 'biome'
---       if isLinter and diagnostic.severity < vim.diagnostic.severity.WARN then
---         --@type vim.Diagnostic
---         local updatedDiagnostic = shallowCopyTable(diagnostic)
---         updatedDiagnostic.severity = vim.diagnostic.severity.WARN
---
---         table.insert(updatedDiagnostics, updatedDiagnostic)
---       else
---         table.insert(updatedDiagnostics, diagnostic)
---       end
---     end
---     original_underline_handler.show(ns, bufferId, updatedDiagnostics, opts)
---   end,
---   hide = function(_namespace, ...)
---     original_underline_handler.hide(ns, ...)
---   end,
--- }
+-- -- vim.diagnostic.handlers.float = withCustomizedDiagnostics(vim.diagnostic.handlers.float, {
+-- --   changelintDiagnosticsSeverity, --
+-- -- })
+-- vim.diagnostic.handlers.signs = withCustomizedDiagnostics(vim.diagnostic.handlers.signs, {
+--   -- changelintDiagnosticsSeverity, --
+-- })
+-- vim.diagnostic.handlers.underline = withCustomizedDiagnostics(vim.diagnostic.handlers.underline, {
+--   -- changelintDiagnosticsSeverity, --
+-- })
+-- vim.diagnostic.handlers.virtual_text = withCustomizedDiagnostics(vim.diagnostic.handlers.virtual_text, {
+--   -- changelintDiagnosticsSeverity,
+--   -- onlyDiagnosticsOfSeverity(vim.diagnostic.severity.ERROR), --
+-- })
+
+---@type DiagnosticTransform
+local function changelintDiagnosticsSeverity(diagnostic)
+  if isLint(diagnostic) then
+    local modifiedDiagnostic = vim.tbl_extend('keep', { severity = vim.diagnostic.severity.WARN }, diagnostic)
+    return modifiedDiagnostic
+  end
+
+  return diagnostic
+end
+
+local originalHandler = vim.lsp.handlers['textDocument/diagnostic']
+vim.lsp.handlers['textDocument/diagnostic'] = function(err, result, ctx, options)
+  -- vim.print(vim.diagnostic.get_namespaces())
+  for _, diagnostic in ipairs(result.items) do
+    if isLint(diagnostic) then
+      diagnostic.severity = vim.diagnostic.severity.WARN
+    end
+  end
+  -- local modifiedDiagnostics = vim
+  --   .iter(diagnostics)
+  --   :map(changelintDiagnosticsSeverity)
+  --   :totable()
+  --
+  -- result.items = modifiedDiagnostics
+  originalHandler(err, result, ctx, options)
+end
 
 vim.diagnostic.config {
   virtual_lines = false,
-  virtual_text = false,
+  virtual_text = {
+    severity = { 'ERROR' },
+  },
   underline = true,
   severity_sort = true,
   jump = { float = true },
-  float = { source = true, border = 'rounded', severity_sort = true, scope = 'cursor' },
+  float = {
+    source = true, --
+    border = 'rounded',
+    severity_sort = true,
+    scope = 'cursor',
+  },
   signs = {
     severity_sort = true,
-    -- text = {
-    --   -- [vim.diagnostic.severity.ERROR] = '',
-    --   -- [vim.diagnostic.severity.WARN] = '',
-    --   -- [vim.diagnostic.severity.INFO] = '',
-    --   -- [vim.diagnostic.severity.HINT] = '',
-    -- },
+    text = {
+      [vim.diagnostic.severity.ERROR] = '',
+      [vim.diagnostic.severity.WARN] = '',
+      [vim.diagnostic.severity.INFO] = '',
+      [vim.diagnostic.severity.HINT] = '',
+    },
     linehl = {},
     numhl = {
       -- [vim.diagnostic.severity.ERROR] = 'DiagnosticLineNumberError',
@@ -96,7 +207,15 @@ vim.diagnostic.config {
   },
 }
 
-vim.keymap.set('n', 'dt', function()
-  local new_config = not vim.diagnostic.config().virtual_lines
-  vim.diagnostic.config { virtual_lines = new_config }
+vim.keymap.set('n', '<leader>td', function()
+  local previous_config = vim.diagnostic.config()
+  if not previous_config then
+    return
+  end
+
+  vim.diagnostic.config {
+    virtual_lines = not previous_config.virtual_lines, --
+    -- virtual_text = not previous_config.virtual_text,
+    -- underline = not previous_config.underline,
+  }
 end, { desc = 'Toggle diagnostic virtual_lines' })

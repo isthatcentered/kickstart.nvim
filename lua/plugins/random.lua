@@ -167,6 +167,8 @@ local Oil = {
       keymaps = {
         ['<C-d>'] = { 'actions.preview_scroll_down' },
         ['<C-u>'] = { 'actions.preview_scroll_up' },
+        ['<C-v>'] = { 'actions.select', opts = { vertical = true } },
+        ['<esc><esc>'] = { 'actions.close', mode = 'n' },
       },
     }
     vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open file explorer' })
@@ -287,24 +289,71 @@ local TextCase = {
 }
 
 local Noice = {
-  "folke/noice.nvim",
-  event = "VeryLazy",
+  'folke/noice.nvim',
+  event = 'VeryLazy',
   opts = {
     -- add any options here
   },
   dependencies = {
     -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
-    "MunifTanjim/nui.nvim",
+    'MunifTanjim/nui.nvim',
     -- OPTIONAL:
     --   `nvim-notify` is only needed, if you want to use the notification view.
     --   If not available, we use `mini` as the fallback
-    "rcarriga/nvim-notify",
+    'rcarriga/nvim-notify',
+  },
+}
+
+local NeoTree = {
+  'nvim-neo-tree/neo-tree.nvim',
+  branch = 'v3.x',
+  dependencies = {
+    'nvim-lua/plenary.nvim',
+    'MunifTanjim/nui.nvim',
+    'nvim-tree/nvim-web-devicons', -- optional, but recommended
+  },
+  lazy = false, -- neo-tree will lazily load itself
+}
+
+local NeoTest = {
+  'nvim-neotest/neotest',
+  config = function()
+    require('neotest').setup {
+      adapters = {
+        require 'neotest-vitest',
+        -- require 'neotest-plenary',
+      },
     }
+
+    vim.api.nvim_set_keymap(
+      'n',
+      '<leader>cvwa',
+      "<cmd>lua require('neotest').run.run({ vitestCommand = 'vitest --config config/vitest.unit.config.ts' })<cr>",
+      { desc = 'Run Watch' }
+    )
+
+    vim.api.nvim_set_keymap(
+      'n',
+      '<leader>cvwf',
+      "<cmd>lua require('neotest').run.run({ vim.fn.expand('%'), vitestCommand = 'vitest --watch --config config/vitest.unit.config.ts' })<cr>",
+      { desc = 'Run Watch File' }
+    )
+  end,
+  dependencies = {
+    'nvim-neotest/nvim-nio',
+    'nvim-lua/plenary.nvim',
+    'antoinemadec/FixCursorHold.nvim',
+    'nvim-treesitter/nvim-treesitter',
+    'marilari88/neotest-vitest',
+  },
 }
 
 return {
   -- copilot,
   -- Noice,
+  NeoTest,
+  NeoTree,
+  { 'nvim-tree/nvim-web-devicons', opts = {} },
   TextCase,
   Harpoon,
   Oil,
