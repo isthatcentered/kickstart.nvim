@@ -112,6 +112,7 @@ return {
       --   builtin.find_files { hidden = true, no_ignore = false}
       -- end, { desc = '[S]earch [F]iles' })
 
+      vim.keymap.set('n', '<leader>sG', builtin.git_status, { desc = '[S]earch [G]it status files' })
       vim.keymap.set('n', '<leader>sq', builtin.quickfix, { desc = '[S]earch [Q]uickfix list' })
       vim.keymap.set('n', '<leader>ss', builtin.lsp_workspace_symbols, { desc = '[S]earch LSP [S]ymbols' })
       vim.keymap.set('n', '<leader>st', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })

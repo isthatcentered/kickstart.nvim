@@ -16,7 +16,20 @@ local Refactoring = {
     'nvim-treesitter/nvim-treesitter',
   },
   lazy = false,
-  opts = {},
+  config = function()
+    require('refactoring').setup()
+    -- vim.keymap.set("x", "gre", ":Refactor extract ")
+    -- vim.keymap.set("x", "", ":Refactor extract_to_file ")
+
+    vim.keymap.set('x', 'gre', ':Refactor extract_var ')
+
+    vim.keymap.set({ 'n' }, 'gri', ':Refactor inline_var')
+
+    -- vim.keymap.set( "n", "<leader>rI", ":Refactor inline_func")
+
+    -- vim.keymap.set("n", "<leader>rb", ":Refactor extract_block")
+    -- vim.keymap.set("n", "<leader>rbf", ":Refactor extract_block_to_file")
+  end,
 }
 
 -- https://github.com/nvim-treesitter/nvim-treesitter/tree/main
@@ -26,18 +39,57 @@ local TreeSitter = {
   branch = 'main',
   build = ':TSUpdate', -- Rebuild tree sitter on update
   config = function()
-    local languages = { 'c', 'lua', 'vim', 'vimdoc', 'query', 'markdown', 'markdown_inline', 'json', 'tsx', 'typescript', 'typescriptreact' }
+    -- No need to call setup when using the default config
+    local languages = {
+      'c', --
+      'lua',
+      'vim',
+      'vimdoc',
+      'query',
+      'markdown',
+      'markdown_inline',
+      'json',
+      'javascript',
+      'tsx',
+      'jsx',
+      'typescript',
+      'toml',
+      'php',
+      'json',
+      'yaml',
+      'css',
+      'html',
+    }
 
     require('nvim-treesitter').install(languages)
+    require('nvim-treesitter').update(languages)
 
     vim.api.nvim_create_autocmd('FileType', {
       pattern = languages,
       callback = function()
         vim.treesitter.start()
-        vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+        -- vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        -- vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
       end,
     })
   end,
+}
+
+local TreesitterTextObjects = {
+  'nvim-treesitter/nvim-treesitter-textobjects',
+  branch = 'main',
+}
+local LANGUAGE_SERVERS = {
+  'ast-grep',
+  'biome',
+  'eslint-lsp',
+  'eslint_d',
+  'prettier',
+  'prettierd',
+  'typescript-language-server',
+  'vtsls',
+  'emmet-language-server',
+  'tailwindcss-language-server',
 }
 
 local LSP = {
@@ -58,6 +110,7 @@ local LSP = {
           'typescript-language-server',
           'vtsls',
           'emmet-language-server',
+          'tailwindcss-language-server',
         },
       },
     },
@@ -160,11 +213,34 @@ local LSP = {
     local language_servers = {
       'lua_ls',
       'eslint',
-      'biome',
+      -- 'biome',
       'ts_ls',
       -- 'vtsls',
+      'emmet_language_server',
       'jsonls',
     }
+
+    local capabilities = vim.lsp.protocol.make_client_capabilities()
+
+    capabilities.textDocument.completion.completionItem = {
+      documentationFormat = { 'markdown', 'plaintext' },
+      snippetSupport = true,
+      preselectSupport = true,
+      insertReplaceSupport = true,
+      labelDetailsSupport = true,
+      deprecatedSupport = true,
+      commitCharactersSupport = true,
+      tagSupport = { valueSet = { 1 } },
+      resolveSupport = {
+        properties = {
+          'documentation',
+          'detail',
+          'additionalTextEdits',
+        },
+      },
+    }
+
+    vim.lsp.config('*', { capabilities = capabilities })
 
     -- vim.lsp.config('vtsls', {
     --   settings = {
@@ -272,6 +348,11 @@ local LSP = {
         --
 
         local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+        if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_foldingRange, event.buf) then
+          vim.wo.foldexpr = 'v:lua.vim.lsp.foldexpr()'
+        end
+
         if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
           local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
           vim.api.nvim_create_autocmd({ 'CursorHold' }, {
@@ -306,6 +387,7 @@ local LSP = {
 return {
   LazyDev,
   TreeSitter,
+  TreesitterTextObjects,
   Refactoring,
   LSP,
 }

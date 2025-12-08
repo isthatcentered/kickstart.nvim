@@ -2,8 +2,8 @@ local ShowKeys = {
   'nvzone/showkeys',
   cmd = 'ShowkeysToggle',
   opts = {
-    timeout = 15,
-    maxkeys = 3,
+    timeout = 6,
+    maxkeys = 4,
     position = 'top-center',
     -- more opts
   },
@@ -90,15 +90,24 @@ local TodoComments = {
   opts = {},
 }
 
-local MiniAI = {
-  'echasnovski/mini.nvim',
+local Mini = {
+  'nvim-mini/mini.nvim',
   version = '*',
   config = function()
-    require('mini.ai').setup()
+    local spec_treesitter = require('mini.ai').gen_spec.treesitter
+    require('mini.ai').setup {
+      custom_textobjects = {
+        f = spec_treesitter { a = '@function.outer', i = '@function.inner' },
+        a = spec_treesitter { a = '@assignment.lhs', i = '@assignment.rhs' },
+        P = spec_treesitter { a = '@parameter.inner', i = '@parameter.inner' },
+        k = spec_treesitter { a = '@comment.outer', i = '@comment.inner' },
+        c = spec_treesitter { a = '@call.outer', i = '@call.outer' },
+      },
+    }
+
+    require('mini.pairs').setup {}
   end,
 }
-
-local MiniPairs = { 'echasnovski/mini.pairs', version = '*', opts = {} }
 
 local Leap = {
   'ggandor/leap.nvim',
@@ -315,43 +324,10 @@ local NeoTree = {
   lazy = false, -- neo-tree will lazily load itself
 }
 
-local NeoTest = {
-  'nvim-neotest/neotest',
-  config = function()
-    require('neotest').setup {
-      adapters = {
-        require 'neotest-vitest',
-        -- require 'neotest-plenary',
-      },
-    }
-
-    vim.api.nvim_set_keymap(
-      'n',
-      '<leader>cvwa',
-      "<cmd>lua require('neotest').run.run({ vitestCommand = 'vitest --config config/vitest.unit.config.ts' })<cr>",
-      { desc = 'Run Watch' }
-    )
-
-    vim.api.nvim_set_keymap(
-      'n',
-      '<leader>cvwf',
-      "<cmd>lua require('neotest').run.run({ vim.fn.expand('%'), vitestCommand = 'vitest --watch --config config/vitest.unit.config.ts' })<cr>",
-      { desc = 'Run Watch File' }
-    )
-  end,
-  dependencies = {
-    'nvim-neotest/nvim-nio',
-    'nvim-lua/plenary.nvim',
-    'antoinemadec/FixCursorHold.nvim',
-    'nvim-treesitter/nvim-treesitter',
-    'marilari88/neotest-vitest',
-  },
-}
 
 return {
   -- copilot,
   -- Noice,
-  NeoTest,
   NeoTree,
   { 'nvim-tree/nvim-web-devicons', opts = {} },
   TextCase,
@@ -364,19 +340,13 @@ return {
   { 'NMAC427/guess-indent.nvim', opts = {} }, -- Detect tabstop and shiftwidth automatically
   Leap,
   FolkePersistence,
-  MiniAI,
-  MiniPairs,
+  Mini,
   TodoComments,
   WhichKeys,
-  {
-    'catgoose/nvim-colorizer.lua',
-    event = 'BufReadPre',
-    opts = {},
-  },
   -- {
-  --   'm4xshen/hardtime.nvim',
-  --   lazy = false,
-  --   dependencies = { 'MunifTanjim/nui.nvim' },
-  --   opts = { disable_mouse = false, max_count = 13 },
+  --   'catgoose/nvim-colorizer.lua',
+  --   event = 'BufReadPre',
+  --   opts = {},
   -- },
+  { 'elihunter173/dirbuf.nvim' },
 }

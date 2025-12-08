@@ -161,7 +161,12 @@ end
 local originalHandler = vim.lsp.handlers['textDocument/diagnostic']
 vim.lsp.handlers['textDocument/diagnostic'] = function(err, result, ctx, options)
   -- vim.print(vim.diagnostic.get_namespaces())
-  for _, diagnostic in ipairs(result.items) do
+  if err then 
+    vim.print(err)
+  end
+
+  result = result or {}
+  for _, diagnostic in ipairs(result.items or {}) do
     if isLint(diagnostic) then
       diagnostic.severity = vim.diagnostic.severity.WARN
     end

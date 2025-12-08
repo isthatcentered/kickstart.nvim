@@ -18,7 +18,7 @@ function M.setup()
       local client = vim.lsp.get_client_by_id(args.data.client_id)
       local bufnr = args.buf
 
-      if not client or client.name ~= config.get().name then
+      if not client or client.name ~= "ts_ls" then
         return
       end
 

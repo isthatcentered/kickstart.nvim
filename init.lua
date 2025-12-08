@@ -48,9 +48,16 @@ vim.o.confirm = true -- show confirm dialog when a file hasn't been saved
 vim.opt.path:append '**' -- include sub directories in search
 
 -- folding settings
+-- https://www.jackfranklin.co.uk/blog/code-folding-in-vim-neovim/
 vim.opt.foldmethod = 'expr' -- use expression for folding
--- vim.wo.vim.foldexpr = "v:lua.vim.treesitter.foldexpr()" -- use treesitter for folding
+vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.opt.foldcolumn = '0'
+vim.opt.foldtext = ''
 vim.opt.foldlevel = 99 -- start with all folds open
+vim.opt.foldlevelstart = 99 -- start with all folds open
+-- vim.opt.foldlevelstart = 1
+vim.keymap.set('n', '(', 'zk', { desc = 'Go to previous fold start' })
+vim.keymap.set('n', ')', 'zj', { desc = 'Go to next fold start' })
 
 -- split behavior
 vim.opt.splitbelow = true -- horizontal splits go below
@@ -136,73 +143,9 @@ vim.api.nvim_create_autocmd('vimresized', {
   end,
 })
 
-require 'config.lazy'
-
--- create a new terminal in a new split down.
--- if there is already a terminal somewhere, reuse the same split and use same buffer.
--- if inside terminal you can create a new terminal or close an existing one. the same split will be used
-local terminal_state = {
-  bufferId = nil,
-  windowId = nil,
-}
-local openShellWindow = function(bufferId)
-  local windowConfig = { vertical = true, height = 15, split = 'below' }
-  local padding = 4
-  local windowId = vim.api.nvim_open_win(terminal_state.bufferId, true, {
-    relative = 'editor',
-    width = (vim.o.columns - (padding * 2)),
-    height = 20,
-    col = padding,
-    row = (vim.o.lines - padding),
-    border = 'rounded',
-    style = 'minimal',
-    footer = { { 'Hello' } },
-  })
-
-  -- vim.keymap.set({"t", "n"}, '<Esc><Esc>', vim.cmd.ToggleOverShell, {})
-
-  return windowId
-end
-
-local toggleOverShell = function()
-  if terminal_state.windowId then
-    vim.api.nvim_win_close(terminal_state.windowId, false)
-    terminal_state.windowId = nil
-    return
-  end
-
-  if terminal_state.bufferId and vim.api.nvim_buf_is_valid(terminal_state.bufferId) then
-    local windowId = openShellWindow(terminal_state.bufferId)
-    terminal_state.windowId = windowId
-    vim.cmd.startinsert()
-    return
-  end
-
-  local bufferId = vim.api.nvim_create_buf(false, true)
-  terminal_state.bufferId = bufferId
-  local windowId = openShellWindow(terminal_state.bufferId)
-  terminal_state.windowId = windowId
-  vim.cmd.terminal()
-  vim.cmd.startinsert()
-end
-
--- TODO: esc + esc toggles terminal (attach to buffer)
-vim.api.nvim_create_user_command('ToggleOverShell', toggleOverShell, {})
-
-vim.keymap.set('n', '<leader>tt', ':ToggleOverShell<CR>', { desc = 'Toggle OverShell' })
-
-vim.keymap.set('n', '<leader>ws', ':w<CR>:source %<CR>', { desc = 'Save & source' })
-
--- Session management
-vim.keymap.set('n', '<leader>_', function()
-  require('persistence').load {}
-end, { desc = 'Load last session' })
-
--- load color scheme
-
--- ignore lazy and go back to native imprt it should work with g_color
--- autosave plugn
--- moves to go to arg/fn start /...v
+-- ============================================================================
+-- Plugins
+-- ============================================================================
 require 'isthatcentered/load_custom_plugins'
 require 'isthatcentered.diagnostics'
 require 'isthatcentered.autosave'
@@ -210,6 +153,9 @@ require 'isthatcentered.autorun'
 vim.opt.background = 'light'
 vim.g.colors_name = 'acid'
 require('acid').setup()
+require 'config.lazy'
+
+vim.keymap.set('n', '<leader>ws', ':w<CR>:source %<CR>', { desc = 'Save & source' })
 
 local lastClosedBuffer = nil
 vim.api.nvim_create_user_command('BufferClose', function()
@@ -245,22 +191,6 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
     return
   end
 
-  if eslint_client and false then
-    eslint_client:request('workspace/executeCommand', {
-      command = 'eslint.applyAllFixes',
-      arguments = {
-        {
-          uri = vim.uri_from_bufnr(0),
-          version = vim.lsp.util.buf_versions[bufnr],
-        },
-      },
-    }, function(err)
-      if err then
-        vim.print(err)
-      end
-    end, bufnr)
-  end
-
   if typescript_ts_ls_client then
     -- {
     -- "source.fixAll.ts",
@@ -288,7 +218,7 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
               client = typescript_ts_ls_client,
               kinds = { 'source.organizeImports.ts' },
               cb = function()
-                if eslint_client and false then
+                if eslint_client then
                   eslint_client:request('workspace/executeCommand', {
                     command = 'eslint.applyAllFixes',
                     arguments = {
@@ -400,6 +330,45 @@ vim.keymap.set('n', '<leader>f', ':IsThatCenteredFormatAction<cr>', { desc = 'Co
 vim.keymap.set('n', 'gri', ':IsThatCenteredImportAction<CR>', { desc = 'Remove unused imports' })
 vim.keymap.set('n', '<leader>ll', ':LspRestart<cr>', { desc = 'Restart lsp server' })
 
+vim.keymap.set('n', '<leader>d', ':%bd|e#<CR>', { desc = 'Close all bufferes except the current one' })
+
+---------------------------------------------------
+-- UTilS shortcuts
+---------------------------------------------------
+vim.keymap.set('n', '<leader>ui', function()
+  vim.print(vim.inspect_pos())
+end, { desc = '[U]til [I]nspect extrmarks' })
+
+vim.keymap.set('n', '<leader>ur', function()
+  local function get_file_test_status(buffer_id)
+    local neotest = require 'neotest'
+    local adapters = neotest.state.adapter_ids()
+    local overall_state = { running = false, failing = false }
+    local is_attached = false
+    local states = {}
+
+    for _, adapter_id in pairs(adapters) do
+      local state = neotest.state.status_counts(adapter_id, { buffer = buffer_id })
+      if state then
+        table.insert(states, state)
+        is_attached = true
+        overall_state.running = overall_state.running or state.running > 0
+        overall_state.failing = overall_state.failing or state.failed > 0
+      end
+    end
+
+    return states, adapters
+  end
+  vim.print(get_file_test_status(vim.api.nvim_get_current_buf()))
+end, { desc = '[U]til [R]andom test' })
+
+vim.keymap.set('n', '<leader>ub', function()
+  local buffer_name = vim.api.nvim_buf_get_name(0)
+
+  vim.print(string.match(buffer_name, 'spec') or string.match(buffer_name, 'test') or false)
+  vim.print(vim.api.nvim_get_current_buf())
+end, { desc = '[U]til get current [B]uffer id' })
+
 -- @TODO: Auto save + custom format per language
 -- TODO:  bnext only switches to buffers opened in this window
 -- @TODO: have window layout presets ?
@@ -433,14 +402,14 @@ vim.keymap.set('n', '<leader>ll', ':LspRestart<cr>', { desc = 'Restart lsp serve
 --
 -- vim.keymap.set('n', '<leader>a', ':IsScroll<CR>', { desc = 'Code fixup actions' })
 
-local initialRenameHandler = vim.lsp.handlers['textDocument/rename']
-local blah2 = 123
-vim.lsp.handlers['textDocument/rename'] = function(...)
-  initialRenameHandler(...)
-  vim.cmd ''
-  vim.notify 'Renamed:::'
-end
-
+-- local initialRenameHandler = vim.lsp.handlers['textDocument/rename']
+-- local blah2 = 123
+-- vim.lsp.handlers['textDocument/rename'] = function(...)
+--   initialRenameHandler(...)
+--   vim.cmd ''
+--   vim.notify 'Renamed:::'
+-- end
+--
 -- Auto restore last session on startup
 vim.api.nvim_create_autocmd('VimEnter', {
   group = vim.api.nvim_create_augroup('Persistence', { clear = true }),
@@ -455,5 +424,14 @@ vim.api.nvim_create_autocmd('VimEnter', {
   -- HACK: need to enable `nested` otherwise the current buffer will not have a filetype(no syntax)
   nested = true,
 })
-local custom_lsp_handler = require 'isthatcentered.vtsls.hello'
-custom_lsp_handler.setup()
+-- local custom_lsp_handler = require 'isthatcentered.vtsls.hello'
+-- custom_lsp_handler.setup()
+
+-- vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
+--   pattern = '*.ts',
+--   callback = function()
+--     -- vim.bo.filetype = "typescript"
+--     vim.print(vim.treesitter.language.get_lang 'typescript')
+-- vim.treesitter.language.register('typescript', 'typescriptreact')
+--   end,
+-- })
