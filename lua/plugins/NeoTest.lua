@@ -42,7 +42,6 @@ local function open_output_panel()
   vim.api.nvim_create_autocmd('WinClosed', {
     pattern = { tostring(window_id) },
     callback = function()
-      vim.print 'Events removed'
       vim.api.nvim_clear_autocmds { group = autocommands_group }
     end,
     group = autocommands_group,
@@ -71,10 +70,23 @@ local NeoTest = {
       },
       consumers = {},
       adapters = {
-        require 'neotest-vitest',
+        require 'neotest-vitest' {
+          -- TODO: help this thing find the config
+          filter_dir = function(name, rel_path, root)
+            return name ~= 'node_modules'
+          end,
+        },
         require 'neotest-plenary',
       },
     }
+
+    vim.keymap.set('n', '<M-S-k>', function()
+      neotest.jump.prev { status = 'failed' }
+    end, { desc = '[N]eotest [P]revious' })
+
+    vim.keymap.set('n', '<M-S-j>', function()
+      neotest.jump.next { status = 'failed' }
+    end, { desc = '[N]eotest [N]next' })
 
     vim.keymap.set('n', '<leader>nt', function()
       neotest.summary.toggle()
@@ -99,13 +111,29 @@ local NeoTest = {
     vim.keymap.set('n', '<leader>np', function()
       neotest.output_panel.toggle()
     end, { desc = '[N]eotest [P]anel' })
+
+vim.keymap.set('n', '<leader>ni', function()
+      neotest.run.run {
+        vim.fn.expand '%', --
+        -- vitestCommand = 'npx vitest --config config/vitest.integration.config.ts',
+        vitestCommand = 'npx vitest',
+      }
+    end, { desc = '[N]eotest watch [F]ile' })
+
+    vim.keymap.set('n', '<leader>nu', function()
+      neotest.run.run {
+        vim.fn.expand '%', --
+        -- vitestCommand = 'npx vitest --config config/vitest.unit.config.ts',
+        vitestCommand = 'npx vitest',
+      }
+    end, { desc = '[N]eotest watch [F]ile' })
     -- vim.api.nvim_set_keymap(
     --   'n',
-    --   '<leader>cvwf',
-    --   "<cmd>lua require('neotest').run.run({ vim.fn.expand('%'), vitestCommand = 'vitest --watch --config config/vitest.unit.config.ts' })<cr>",
+    --   '<leader>nv',
+    --   "<cmd>lua require('neotest').run.run({ vim.fn.expand('%'),  })<CR>",
     --   { desc = 'Run Watch File' }
     -- )
   end,
 }
 
-return { NeoTest }
+return { }

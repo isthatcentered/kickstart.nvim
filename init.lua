@@ -40,6 +40,7 @@ vim.opt.autoread = true -- Auto reload files changed outside vim
 vim.opt.autowrite = true -- Auto save
 
 -- Behavior settings
+vim.opt.nrformats:append 'alpha'
 vim.opt.errorbells = false -- No error bells
 vim.opt.mouse = 'a' -- Enable mouse support
 vim.o.splitright = true
@@ -84,6 +85,8 @@ vim.keymap.set('n', '<C-l>', '<c-w><c-w>', { desc = 'move focus to next window' 
 -- Buffer navigation
 vim.keymap.set('n', '<c-d>', '<c-d>zz', { desc = 'half page down (centered)' })
 vim.keymap.set('n', '<c-u>', '<c-u>zz', { desc = 'half page up (centered)' })
+vim.keymap.set('n', '<C-h>', ':b#<cr>', { desc = 'Go to alternate buffer' })
+
 -- vim.keymap.set('n', '<C-j>', ':bnext<cr>', { desc = 'next buffer' })
 -- vim.keymap.set('n', '<C-k>', ':bprevious<cr>', { desc = 'previous buffer' })
 
@@ -241,7 +244,7 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
     }
   end
 
-  if typescript_vtsls_client and false then
+  if typescript_vtsls_client then
     typescript_vtsls_client:exec_cmd({
       title = 'Remove unused imports',
       command = 'typescript.removeUnusedImports',
@@ -249,26 +252,25 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
         vim.api.nvim_buf_get_name(bufnr),
       },
     }, { bufnr = vim.api.nvim_get_current_buf() }, function()
-      typescript_vtsls_client:exec_cmd({
-        title = 'Sort imports',
-        command = 'typescript.sortImports',
+      if not eslint_client then
+        require('vtsls').commands.organize_imports(0, function() end, function() end)
+        -- Add missing imports?
+        return
+      end
+
+      eslint_client:request('workspace/executeCommand', {
+        command = 'eslint.applyAllFixes',
         arguments = {
-          vim.api.nvim_buf_get_name(bufnr),
-        },
-      }, { bufnr = vim.api.nvim_get_current_buf() }, function()
-        if not eslint_client then
-          return
-        end
-        eslint_client:request_sync('workspace/executeCommand', {
-          command = 'eslint.applyAllFixes',
-          arguments = {
-            {
-              uri = vim.uri_from_bufnr(0),
-              version = vim.lsp.util.buf_versions[bufnr],
-            },
+          {
+            uri = vim.uri_from_bufnr(0),
+            version = vim.lsp.util.buf_versions[bufnr],
           },
-        }, nil, bufnr)
-      end)
+        },
+      }, function(err)
+        if err then
+          vim.print(err)
+        end
+      end, bufnr)
     end)
   end
 
@@ -339,6 +341,12 @@ vim.keymap.set('n', '<leader>ui', function()
   vim.print(vim.inspect_pos())
 end, { desc = '[U]til [I]nspect extrmarks' })
 
+vim.keymap.set('n', '<leader>uf', function()
+  local path = vim.fn.expand '%:.'
+  vim.fn.setreg('+', path)
+  vim.print(path)
+end, { desc = '[U]til [I]nspect extrmarks' })
+
 vim.keymap.set('n', '<leader>ur', function()
   local function get_file_test_status(buffer_id)
     local neotest = require 'neotest'
@@ -362,12 +370,40 @@ vim.keymap.set('n', '<leader>ur', function()
   vim.print(get_file_test_status(vim.api.nvim_get_current_buf()))
 end, { desc = '[U]til [R]andom test' })
 
+vim.keymap.set('n', '<leader>uC', function()
+  vim.cmd 'set conceallevel=0'
+end, { desc = '[U]til set [C]onceal level to 0' })
+
+vim.keymap.set('n', '<leader>uc', function()
+  vim.cmd 'set conceallevel=3'
+end, { desc = '[U]til get current set [C]onceal level to 3' })
+
 vim.keymap.set('n', '<leader>ub', function()
   local buffer_name = vim.api.nvim_buf_get_name(0)
-
-  vim.print(string.match(buffer_name, 'spec') or string.match(buffer_name, 'test') or false)
   vim.print(vim.api.nvim_get_current_buf())
 end, { desc = '[U]til get current [B]uffer id' })
+
+vim.keymap.set('n', '<leader>uf', function()
+  local relative_path = vim.fn.expand '%'
+  vim.fn.setreg('+', relative_path) -- Copy to system clipboard
+  vim.print(relative_path)
+end, { desc = '[U]til get current [F]ile name' })
+
+vim.keymap.set('n', '<leader>up', function()
+  local full_path = vim.fn.expand '%:p'
+  vim.fn.setreg('+', full_path) -- Copy to system clipboard
+  vim.print(full_path)
+end, { desc = '[U]til get current [P]ath' })
+
+vim.keymap.set('n', '<leader>uw', function()
+  local window_id = vim.api.nvim_get_current_win()
+
+  vim.print(window_id)
+end, { desc = '[U]til get current [W]indow id' })
+
+vim.keymap.set('n', '<leader>um', function()
+  vim.cmd "enew | put =execute('messages') | setlocal buftype=nofile bufhidden=wipe noswapfile"
+end, { desc = '[U]til get current [W]indow id' })
 
 -- @TODO: Auto save + custom format per language
 -- TODO:  bnext only switches to buffers opened in this window
@@ -418,7 +454,9 @@ vim.api.nvim_create_autocmd('VimEnter', {
     -- 1. No arg passed when opening nvim, means no `nvim --some-arg ./some-path`
     -- 2. No pipe, e.g. `echo "Hello world" | nvim`
     if vim.fn.argc() == 0 and not vim.g.started_with_stdin then
-      require('persistence').load()
+      pcall(function()
+        require('persistence').load()
+      end)
     end
   end,
   -- HACK: need to enable `nested` otherwise the current buffer will not have a filetype(no syntax)
@@ -435,3 +473,8 @@ vim.api.nvim_create_autocmd('VimEnter', {
 -- vim.treesitter.language.register('typescript', 'typescriptreact')
 --   end,
 -- })
+
+
+-- Enable local .nvim.lua files
+vim.o.exrc = true
+vim.o.secure = true

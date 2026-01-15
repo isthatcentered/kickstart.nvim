@@ -31,6 +31,7 @@ local Refactoring = {
     -- vim.keymap.set("n", "<leader>rbf", ":Refactor extract_block_to_file")
   end,
 }
+local VTSLS = { 'yioneko/nvim-vtsls' }
 
 -- https://github.com/nvim-treesitter/nvim-treesitter/tree/main
 local TreeSitter = {
@@ -102,6 +103,7 @@ local LSP = {
       opts = {
         ensure_installed = {
           'ast-grep',
+          'jq',
           'biome',
           'eslint-lsp',
           'eslint_d',
@@ -166,9 +168,10 @@ local LSP = {
             auto_show = true,
             border = 'rounded',
 
-            -- draw = {
-            --   columns = { { 'label', 'label_description', gap = 1 }, { 'kind_icon', 'kind' } },
-            -- },
+            draw = {
+              columns = { { 'label', 'label_description', gap = 1 }, { 'kind_icon', 'kind', gap = 1 } },
+              treesitter = { 'lsp' },
+            },
           },
 
           documentation = {
@@ -214,8 +217,8 @@ local LSP = {
       'lua_ls',
       'eslint',
       -- 'biome',
-      'ts_ls',
-      -- 'vtsls',
+      -- 'ts_ls',
+      'vtsls',
       'emmet_language_server',
       'jsonls',
     }
@@ -242,24 +245,30 @@ local LSP = {
 
     vim.lsp.config('*', { capabilities = capabilities })
 
-    -- vim.lsp.config('vtsls', {
-    --   settings = {
-    --     vtsls = {
-    --       enableMoveToFileCodeAction = true,
-    --     },
-    --     typescript = {
-    --       updateImportsOnFileMove = 'always',
-    --       referencesCodeLens = {
-    --         enabled = true,
-    --         showOnAllFunctions = true,
-    --         showOnInterfaceMethods = true,
-    --       },
-    --       preferences = {
-    --         importModuleSpecifier = 'relative',
-    --       },
-    --     },
-    --   },
-    -- })
+    require('lspconfig.configs').vtsls = require('vtsls').lspconfig
+    vim.lsp.config('vtsls', {
+      settings = {
+        vtsls = {
+          enableMoveToFileCodeAction = true,
+        },
+        typescript = {
+          tsserver = {
+            maxTsServerMemory = 8192,
+          },
+          updateImportsOnFileMove = {
+            enabled = 'always',
+          },
+          referencesCodeLens = {
+            enabled = true,
+            showOnAllFunctions = true,
+            showOnInterfaceMethods = true,
+          },
+          preferences = {
+            importModuleSpecifier = 'relative',
+          },
+        },
+      },
+    })
 
     vim.lsp.config('ts_ls', {
       settings = {
@@ -385,6 +394,7 @@ local LSP = {
 }
 
 return {
+  VTSLS,
   LazyDev,
   TreeSitter,
   TreesitterTextObjects,

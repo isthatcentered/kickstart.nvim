@@ -1,15 +1,11 @@
-# Mark targets as phony (not actual file names) to ensure they always run
-.PHONY: test test-watch test-watch-path setup-lua clean
+.PHONY: test test-watch test-watch-file setup-lua clean
 
-# Configuration variables for Lua environment
 LUA_DIR := __lua__
 LUA_ACTIVATE := $(LUA_DIR)/bin/activate
 LUA_VERSION := 5.1.1
 
-# Set up local Lua environment with testing dependencies
-# This creates an isolated Lua environment to avoid conflicts with system Lua
+# Check if lua is available, if not set it up
 setup-lua:
-	# Check if Lua environment already exists, create if missing
 	@if [ ! -f "$(LUA_ACTIVATE)" ]; then \
 		echo "Setting up Lua $(LUA_VERSION) with hererocks..."; \
 		if ! command -v hererocks >/dev/null 2>&1; then \
@@ -19,56 +15,48 @@ setup-lua:
 		hererocks $(LUA_DIR) -l$(LUA_VERSION) -rlatest; \
 		echo "Lua $(LUA_VERSION) installed in $(LUA_DIR)"; \
 		echo "Installing nlua and busted..."; \
-		bash -c ". $(LUA_ACTIVATE) && luarocks install nlua && luarocks install busted"; \
+		bash -c "source $(LUA_ACTIVATE) && luarocks install nlua && luarocks install busted"; \
 	fi
-	# Ensure nlua is installed (needed for Neovim API access in tests)
 	@if [ ! -f "$(LUA_DIR)/bin/nlua" ]; then \
 		echo "Installing missing nlua..."; \
-		bash -c ". $(LUA_ACTIVATE) && luarocks install nlua"; \
+		bash -c "source $(LUA_ACTIVATE) && luarocks install nlua"; \
 	fi
-	# Ensure busted is installed (our test runner)
-	@if ! bash -c ". $(LUA_ACTIVATE) && luarocks list | grep -q busted"; then \
+	@if ! bash -c "source $(LUA_ACTIVATE) && luarocks list | grep -q busted"; then \
 		echo "Installing missing busted..."; \
-		bash -c ". $(LUA_ACTIVATE) && luarocks install busted"; \
+		bash -c "source $(LUA_ACTIVATE) && luarocks install busted"; \
 	fi
 
 # Run all tests once
-# Depends on setup-lua to ensure test environment is ready
 test: setup-lua
-	# Use local Lua environment if available, otherwise fall back to system Lua
-	@if [ -f "$(LUA_ACTIVATE)" ]; then \
-		bash -c ". $(LUA_ACTIVATE) && eval \$$(luarocks path --no-bin) && luarocks test --local"; \
-	else \
-		eval $$(luarocks path --no-bin) && luarocks test --local; \
-	fi
+	nvim --headless --noplugin -u scripts/minimal_init.vim -c "PlenaryBustedDirectory lua/ {minimal_init = 'scripts/minimal_init.vim'}"
 
-# Watch for file changes and automatically re-run tests
-# Monitors both test files (*_spec.lua) and source files (lua/*.lua)
+# Watch lua folder and run tests on changes
 test-watch: setup-lua
-	@if [ -f "$(LUA_ACTIVATE)" ]; then \
-		# Find all test files and Lua source files, pipe to entr for file watching
-		(find . -name "*_spec.lua"; find lua/ -name "*.lua" 2>/dev/null || true) | entr -s '. $(LUA_ACTIVATE) && eval $$(luarocks path --no-bin) && luarocks test --local'; \
-	else \
-		# Fallback version without local Lua environment
-		(find . -name "*_spec.lua"; find lua/ -name "*.lua" 2>/dev/null || true) | entr -s 'eval $$(luarocks path --no-bin) && luarocks test --local'; \
-	fi
+	@trap 'exit 0' INT; \
+	while true; do \
+		find lua/ -name "*.lua" | entr -r sh -c 'nvim --headless --noplugin -u scripts/minimal_init.vim -c "PlenaryBustedDirectory lua/ {minimal_init = '\''scripts/minimal_init.vim'\''}" 2>&1; exit 0' || break; \
+		sleep 0.1; \
+	done
 
-# Watch for test file changes in a specific directory
-# Useful for focusing on a subset of tests during development
-# Usage: make test-watch-path PATH=lua/some/specific/path/
-test-watch-path: setup-lua
-ifndef PATH
-	$(error PATH is not set. Usage: make test-watch-path PATH=lua/)
-endif
-	@if [ -f "$(LUA_ACTIVATE)" ]; then \
-		# Watch only test files in the specified PATH
-		find $(PATH) -name "*_spec.lua" | entr -s '. $(LUA_ACTIVATE) && eval $$(luarocks path --no-bin) && luarocks test --local'; \
-	else \
-		# Fallback version for system Lua
-		find $(PATH) -name "*_spec.lua" | entr -s 'eval $$(luarocks path --no-bin) && luarocks test --local'; \
-	fi
+# Watch lua folder and run tests for a specific file
+# Usage: make test-watch-file lua/scoped/init_spec.lua
+test-watch-file: setup-lua
+	@FILE="$(filter-out test-watch-file,$@)"; \
+	if [ -z "$(word 2,$(MAKECMDGOALS))" ]; then \
+		echo "Error: File path required. Usage: make test-watch-file lua/path/to/test_spec.lua"; \
+		exit 1; \
+	fi; \
+	FILE="$(word 2,$(MAKECMDGOALS))"; \
+	trap 'exit 0' INT; \
+	while true; do \
+		find lua/ -name "*.lua" | entr -r sh -c "nvim --headless --noplugin -u scripts/minimal_init.vim -c \"PlenaryBustedFile $$FILE\" 2>&1; exit 0" || break; \
+		sleep 0.1; \
+	done
+
+# Prevent make from interpreting the file path as a target
+%:
+	@:
 
 # Clean up the local Lua installation
-# Removes the entire __lua__ directory and all its contents
 clean:
 	rm -rf $(LUA_DIR)

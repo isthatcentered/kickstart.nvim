@@ -1,6 +1,6 @@
 local telescope_actions = require 'telescope.actions'
 local telescope_state = require 'telescope.actions.state'
-local harpoon = require 'harpoon'
+-- local harpoon = require 'harpoon'
 
 return {
   {
@@ -28,26 +28,26 @@ return {
             -- i = { ['<c-enter>'] = require 'telescope.actions.' },
             n = {
               -- Add shortcut to add a file to harpoon
-              ['<C-a>'] = function(prompt_buffnr)
-                --- @type {[1]: string, cwd: string}
-                local highlighted_entry = telescope_state.get_selected_entry()
-                -- vim.print(highlighted_entry)
-                local relative_file_path = highlighted_entry[1]
-                local default_harpoon_list = harpoon:list()
-                local existing_match = default_harpoon_list:get_by_value(relative_file_path)
-
-                if existing_match then
-                  default_harpoon_list:remove(existing_match)
-
-                  vim.notify('File ' .. relative_file_path .. ' removed from harpoon')
-                else
-                  default_harpoon_list:add {
-                    context = { col = 0, row = 1 },
-                    value = relative_file_path,
-                  }
-                  vim.notify('File ' .. relative_file_path .. ' added to harpoon')
-                end
-              end,
+              -- ['<C-a>'] = function(prompt_buffnr)
+              --   --- @type {[1]: string, cwd: string}
+              --   local highlighted_entry = telescope_state.get_selected_entry()
+              --   -- vim.print(highlighted_entry)
+              --   local relative_file_path = highlighted_entry[1]
+              --   local default_harpoon_list = harpoon:list()
+              --   local existing_match = default_harpoon_list:get_by_value(relative_file_path)
+              --
+              --   if existing_match then
+              --     default_harpoon_list:remove(existing_match)
+              --
+              --     vim.notify('File ' .. relative_file_path .. ' removed from harpoon')
+              --   else
+              --     default_harpoon_list:add {
+              --       context = { col = 0, row = 1 },
+              --       value = relative_file_path,
+              --     }
+              --     vim.notify('File ' .. relative_file_path .. ' added to harpoon')
+              --   end
+              -- end,
             },
           },
         },

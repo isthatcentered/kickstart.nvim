@@ -8,6 +8,7 @@ local LuaLine = {
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   config = function()
     local TestsStatus = require 'lualine_components.TestStatus'
+    local ScopedStatus = require 'lualine_components.ScopedStatus'
     require('lualine').setup {
       options = {
         component_separators = { left = '', right = '' },
@@ -41,6 +42,7 @@ local LuaLine = {
           'location',
           {
 
+            ScopedStatus, 
             TestsStatus,
             is_active = true,
           },
@@ -55,6 +57,7 @@ local LuaLine = {
         lualine_x = {
           'location',
           {
+            ScopedStatus, 
             TestsStatus,
             is_active = false,
           },

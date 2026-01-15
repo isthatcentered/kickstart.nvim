@@ -7,8 +7,99 @@ local PERSONAL_PLUGINS = {
     config = function()
       local beacon = require 'beacon'
 
-      beacon.setup {
+      beacon.setup {}
+    end,
+  },
+  {
+    name = 'scoped',
+    config = function()
+      local scoped = require('scoped').instance()
+
+      vim.keymap.set('n', '<leader><leader>', function()
+        scoped:toggle()
+      end, { desc = 'Open ListsEditor' })
+
+      vim.keymap.set('n', '<C-j>', function()
+        scoped:next_in_current_window()
+      end, { desc = 'Go to next file in lit' })
+
+      vim.keymap.set('n', '<C-k>', function()
+        scoped:previous_in_current_window()
+      end, { desc = 'Go to prev in current window' })
+
+      vim.keymap.set('n', 'sfa', function()
+        scoped:add_current_file_to_current_list()
+      end, { desc = 'Add current file to current list' })
+
+      vim.keymap.set('n', 'sfr', function()
+        scoped:remove_current_file_from_current_list()
+      end, { desc = 'Remove current file from current list' })
+
+      vim.keymap.set('n', 'sff', function()
+        if scoped:has_bound_list(vim.api.nvim_get_current_win()) then
+          scoped:add_current_file_to_current_list()
+          return
+        end
+
+        local list_name = scoped:generate_scratch_name 'scratch_list'
+        scoped:create_list(list_name)
+        scoped:bind_current_window_to_list(list_name)
+        scoped:add_current_file_to_current_list()
+      end, { desc = 'Add the current file to the current list. If there is not current list, create one' })
+
+      vim.keymap.set('n', 'slr', function()
+        scoped:unbind_current_list_from_current_window()
+      end, { desc = 'Unbind the list associated to the window' })
+
+      vim.keymap.set('n', 'sa', function()
+        scoped:add_current_file_to_current_list()
+      end, { desc = 'Add current file to current list' })
+    end,
+  },
+  {
+    name = 'nope',
+    config = function()
+      local nope = require 'nope'
+
+      local RunConfiguration = require 'nope.RunConfiguration'
+      local make_default_label = require 'nope.make_default_label'
+      local VitestAdapter = require 'nope.vitest.VitestAdapter'
+      local PlenaryAdapter = require 'nope.plenary.PlenaryAdapter'
+      local BufferConsumer = require 'nope.consumers.BufferConsumer.init'
+      local DiagnosticsConsumer = require 'nope.consumers.DiagnosticsConsumer.init'
+
+      local vitest_adapter = VitestAdapter.new()
+      local plenary_adapter = PlenaryAdapter.new()
+
+      nope.setup { --
+        adapters = { vitest_adapter, plenary_adapter },
       }
+
+      local buffer_consumer = BufferConsumer.new(
+        function(cb)
+          return nope.listen(cb)
+        end, --
+        function(cmd)
+          if cmd.type == 'NopeStopRun' then
+          else
+            error('Unknown nope command: ' .. cmd.type)
+          end
+        end
+      )
+
+      DiagnosticsConsumer.new(function(cb)
+        return nope.listen(cb)
+      end)
+
+
+
+      vim.keymap.set('n', '<leader>np', function()
+        buffer_consumer:toggle()
+      end, { desc = 'Toggle run view' })
+
+      vim.keymap.set('n', '<leader>ns', function()
+        nope.stop_all()
+      end, { desc = 'Stop all runnng tests' })
     end,
   },
 }

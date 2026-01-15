@@ -3,13 +3,48 @@ local DiffView = {
   config = function()
     local diffview = require 'diffview'
 
-    diffview.setup()
+    diffview.setup {
+      view = {
+        default = {
+          diff_args = { '--ignore-all-space' },
+        },
+        merge_tool = {
+          diff_args = { '--ignore-all-space' },
+        },
+        file_history = {
+          diff_args = { '--ignore-all-space' },
+        },
+      },
+    }
 
     local opened = false
+
+    vim.keymap.set('n', '<leader>gc', function()
+      vim.cmd 'DiffviewFileHistory --range=origin/master..HEAD'
+    end, { desc = 'Branch commit history' })
+
+    vim.keymap.set('n', '<leader>gf', function()
+      vim.cmd 'DiffviewFileHistory %'
+    end, { desc = 'File history' })
+
     vim.keymap.set('n', '<leader>gg', function()
       if not opened then
         diffview.open()
         opened = true
+        vim.cmd 'set relativenumber'
+
+        vim.keymap.set('n', '<Esc><Esc>', function()
+          require('diffview').close()
+          opened = false
+        end, { buffer = vim.api.nvim_get_current_buf() })
+
+        vim.api.nvim_create_autocmd('TabLeave', {
+          once = true,
+          callback = function()
+            diffview.close()
+            opened = false
+          end,
+        })
       else
         diffview.close()
         opened = false
@@ -42,6 +77,7 @@ local NeoGit = {
   cmd = 'Neogit',
   keys = {
     { '<leader>gG', '<cmd>Neogit<cr>', desc = 'Show Neogit UI' },
+    { '<leader>gc', '<cmd>Neogit commit<cr>', desc = 'Commit' },
   },
   opts = {
     integrations = {

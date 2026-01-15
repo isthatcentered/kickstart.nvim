@@ -15,9 +15,6 @@ test_dependencies = {
   "nlua",
   "busted >= 2.0"
 }
-test = {
-  type = "busted"
-}
 build = {
   type = "builtin",
   copy_directories = {
@@ -25,4 +22,10 @@ build = {
     -- 'plugin', 'ftplugin', 'doc'
     -- here. DO NOT add 'lua' or 'lib'.
   },
+}
+test = {
+  type = "busted",
+  directories = {
+    "lua"
+  }
 }
