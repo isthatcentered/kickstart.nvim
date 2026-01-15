@@ -6,18 +6,32 @@ local DiffView = {
     diffview.setup {
       view = {
         default = {
-          diff_args = { '--ignore-all-space' },
+          diff_args = { '--ignore-all-space', '-U99999' },
         },
         merge_tool = {
-          diff_args = { '--ignore-all-space' },
+          diff_args = { '--ignore-all-space', '-U99999' },
         },
         file_history = {
-          diff_args = { '--ignore-all-space' },
+          diff_args = { '--ignore-all-space', '-U99999' },
         },
       },
+      hooks = {
+        diff_buf_read = function()
+          vim.opt_local.foldenable = false
+          vim.opt_local.relativenumber = true
+        end,
+        view_opened = function(view)
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(view.tabpage)) do
+            vim.wo[win].relativenumber = true
+          end
+          vim.keymap.set('n', '<Esc><Esc>', function()
+            if vim.api.nvim_get_current_tabpage() == view.tabpage then
+              vim.cmd 'DiffviewClose'
+            end
+          end, { desc = 'Close diffview' })
+        end,
+      },
     }
-
-    local opened = false
 
     vim.keymap.set('n', '<leader>gc', function()
       vim.cmd 'DiffviewFileHistory --range=origin/master..HEAD'
@@ -27,29 +41,17 @@ local DiffView = {
       vim.cmd 'DiffviewFileHistory %'
     end, { desc = 'File history' })
 
+    vim.keymap.set('n', '<leader>ga', function()
+      vim.cmd 'DiffviewOpen origin/master'
+    end, { desc = 'Diff against master' })
+
     vim.keymap.set('n', '<leader>gg', function()
-      if not opened then
-        diffview.open()
-        opened = true
-        vim.cmd 'set relativenumber'
+      vim.cmd 'DiffviewOpen'
+    end, { desc = 'Diff unstaged changes' })
 
-        vim.keymap.set('n', '<Esc><Esc>', function()
-          require('diffview').close()
-          opened = false
-        end, { buffer = vim.api.nvim_get_current_buf() })
-
-        vim.api.nvim_create_autocmd('TabLeave', {
-          once = true,
-          callback = function()
-            diffview.close()
-            opened = false
-          end,
-        })
-      else
-        diffview.close()
-        opened = false
-      end
-    end, { desc = 'Toggle DiffView' })
+    vim.keymap.set('n', '<leader>gq', function()
+      vim.cmd 'DiffviewClose'
+    end, { desc = 'Close diffview' })
   end,
 }
 
