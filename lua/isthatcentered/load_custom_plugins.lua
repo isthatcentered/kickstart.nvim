@@ -65,7 +65,7 @@ local PERSONAL_PLUGINS = {
       local make_default_label = require 'nope.make_default_label'
       local VitestAdapter = require 'nope.vitest.VitestAdapter'
       local PlenaryAdapter = require 'nope.plenary.PlenaryAdapter'
-      local BufferConsumer = require 'nope.consumers.BufferConsumer.init'
+      local WindowConsumer = require 'nope.consumers.WindowConsumer'
       local DiagnosticsConsumer = require 'nope.consumers.DiagnosticsConsumer.init'
 
       local vitest_adapter = VitestAdapter.new()
@@ -75,7 +75,7 @@ local PERSONAL_PLUGINS = {
         adapters = { vitest_adapter, plenary_adapter },
       }
 
-      local buffer_consumer = BufferConsumer.new(
+      local window_consumer = WindowConsumer.make(
         function(cb)
           return nope.listen(cb)
         end, --
@@ -92,9 +92,14 @@ local PERSONAL_PLUGINS = {
       end)
 
 
+      vim.api.nvim_create_autocmd({"VimLeavePre"}, {
+        callback = function()
+          window_consumer:close()
+        end,
+      })
 
       vim.keymap.set('n', '<leader>np', function()
-        buffer_consumer:toggle()
+        window_consumer:toggle()
       end, { desc = 'Toggle run view' })
 
       vim.keymap.set('n', '<leader>ns', function()

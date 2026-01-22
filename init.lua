@@ -389,6 +389,15 @@ vim.keymap.set('n', '<leader>uf', function()
   vim.print(relative_path)
 end, { desc = '[U]til get current [F]ile name' })
 
+vim.keymap.set('n', '<leader>ul', function()
+  local relative_path = vim.fn.expand '%'
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  vim.print(line)
+  local zero_indexed_line = line - 1
+  vim.fn.setreg('+', relative_path .. '#L' .. zero_indexed_line) -- Copy to system clipboard
+  vim.print(relative_path)
+end, { desc = '[U]til get current [F]ile name and line' })
+
 vim.keymap.set('n', '<leader>up', function()
   local full_path = vim.fn.expand '%:p'
   vim.fn.setreg('+', full_path) -- Copy to system clipboard
@@ -473,7 +482,6 @@ vim.api.nvim_create_autocmd('VimEnter', {
 -- vim.treesitter.language.register('typescript', 'typescriptreact')
 --   end,
 -- })
-
 
 -- Enable local .nvim.lua files
 vim.o.exrc = true

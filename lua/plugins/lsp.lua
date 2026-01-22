@@ -216,7 +216,7 @@ local LSP = {
     local language_servers = {
       'lua_ls',
       'eslint',
-      -- 'biome',
+      'biome',
       -- 'ts_ls',
       'vtsls',
       'emmet_language_server',

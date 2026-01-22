@@ -1,3 +1,29 @@
+local function get_main_branch()
+  -- Try symbolic-ref first (most reliable)
+  local ref = vim.fn.system 'git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null'
+  if vim.v.shell_error == 0 then
+    return ref:match('refs/remotes/origin/(.+)'):gsub('%s+', '')
+  end
+  -- Fallback: check if origin/main or origin/master exists
+  vim.fn.system 'git rev-parse --verify origin/main 2>/dev/null'
+  if vim.v.shell_error == 0 then
+    return 'main'
+  end
+  vim.fn.system 'git rev-parse --verify origin/master 2>/dev/null'
+  if vim.v.shell_error == 0 then
+    return 'master'
+  end
+  return nil
+end
+
+local function get_current_branch()
+  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD 2>/dev/null'
+  if vim.v.shell_error == 0 then
+    return branch:gsub('%s+', '')
+  end
+  return nil
+end
+
 local DiffView = {
   'sindrets/diffview.nvim',
   config = function()
@@ -29,12 +55,28 @@ local DiffView = {
               vim.cmd 'DiffviewClose'
             end
           end, { desc = 'Close diffview' })
+
+          -- Auto-close diffview when leaving its tab
+          vim.api.nvim_create_autocmd('TabLeave', {
+            once = true,
+            callback = function()
+              vim.print 'close'
+              vim.cmd 'DiffviewClose'
+            end,
+          })
         end,
+        view_closed = function() end,
       },
     }
 
     vim.keymap.set('n', '<leader>gc', function()
-      vim.cmd 'DiffviewFileHistory --range=origin/master..HEAD'
+      local main = get_main_branch()
+      local current = get_current_branch()
+      if main == nil or current == main then
+        vim.cmd 'DiffviewFileHistory'
+      else
+        vim.cmd('DiffviewFileHistory --range=origin/' .. main .. '..HEAD')
+      end
     end, { desc = 'Branch commit history' })
 
     vim.keymap.set('n', '<leader>gf', function()
@@ -42,8 +84,14 @@ local DiffView = {
     end, { desc = 'File history' })
 
     vim.keymap.set('n', '<leader>ga', function()
-      vim.cmd 'DiffviewOpen origin/master'
-    end, { desc = 'Diff against master' })
+      local main = get_main_branch()
+      if main == nil then
+        vim.notify('No remote main branch found', vim.log.levels.WARN)
+        return
+      end
+      vim.cmd('!git fetch origin ' .. main)
+      vim.cmd('DiffviewOpen origin/' .. main)
+    end, { desc = 'Diff against main branch' })
 
     vim.keymap.set('n', '<leader>gg', function()
       vim.cmd 'DiffviewOpen'
