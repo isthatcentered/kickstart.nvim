@@ -97,6 +97,11 @@ local DiffView = {
       vim.cmd 'DiffviewOpen'
     end, { desc = 'Diff unstaged changes' })
 
+    vim.keymap.set('n', '<leader>gF', function()
+      local current_dir = vim.fn.expand('%:p:h')
+      vim.cmd('DiffviewFileHistory ' .. current_dir)
+    end, { desc = 'Folder history' })
+
     vim.keymap.set('n', '<leader>gq', function()
       vim.cmd 'DiffviewClose'
     end, { desc = 'Close diffview' })
