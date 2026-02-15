@@ -175,6 +175,23 @@ vim.api.nvim_create_user_command('BufferOpenLastClosed', function()
   vim.api.nvim_win_set_buf(currentWin, lastClosedBuffer)
 end, {})
 
+vim.api.nvim_create_user_command('Shada', function()
+  local shada_dir = vim.fn.stdpath('state') .. '/shada'
+  local pattern = shada_dir .. '/main.shada.tmp.*'
+  local files = vim.fn.glob(pattern, false, true)
+
+  if #files == 0 then
+    vim.notify('No ShaDa temp files to clean', vim.log.levels.INFO)
+    return
+  end
+
+  for _, file in ipairs(files) do
+    os.remove(file)
+  end
+
+  vim.notify('Cleaned ' .. #files .. ' ShaDa temp files', vim.log.levels.INFO)
+end, { desc = 'Clean orphaned ShaDa temp files' })
+
 vim.keymap.set('n', '<M-w>', ':BufferClose<cr>', { desc = 'Close current buffer while keeping window open' })
 vim.keymap.set('n', '<M-W>', ':BufferOpenLastClosed<cr>', { desc = 'Open last closed buffer' })
 
@@ -389,14 +406,31 @@ vim.keymap.set('n', '<leader>uf', function()
   vim.print(relative_path)
 end, { desc = '[U]til get current [F]ile name' })
 
-vim.keymap.set('n', '<leader>ul', function()
+vim.keymap.set({ 'n', 'v' }, '<leader>ul', function()
   local relative_path = vim.fn.expand '%'
-  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-  vim.print(line)
-  local zero_indexed_line = line - 1
-  vim.fn.setreg('+', relative_path .. '#L' .. zero_indexed_line) -- Copy to system clipboard
-  vim.print(relative_path)
-end, { desc = '[U]til get current [F]ile name and line' })
+  local mode = vim.fn.mode()
+
+  local result
+  if mode == 'v' or mode == 'V' or mode == '\22' then
+    -- Visual mode: get selection range
+    -- Exit visual mode to update '< and '> marks
+    vim.cmd 'normal! '
+    local start_line = vim.fn.line "'<"
+    local end_line = vim.fn.line "'>"
+    if start_line == end_line then
+      result = relative_path .. '#L' .. start_line
+    else
+      result = relative_path .. '#L' .. start_line .. '-L' .. end_line
+    end
+  else
+    -- Normal mode: use current line (1-indexed, which GitHub expects)
+    local line = vim.fn.line '.'
+    result = relative_path .. '#L' .. line
+  end
+
+  vim.fn.setreg('+', result)
+  vim.print(result)
+end, { desc = '[U]til get current [L]ine or range' })
 
 vim.keymap.set('n', '<leader>up', function()
   local full_path = vim.fn.expand '%:p'

@@ -84,27 +84,43 @@ local DiffView = {
     end, { desc = 'File history' })
 
     vim.keymap.set('n', '<leader>ga', function()
+      -- Update main branch to compare against latest changes
       local main = get_main_branch()
       if main == nil then
         vim.notify('No remote main branch found', vim.log.levels.WARN)
         return
       end
-      vim.cmd('!git fetch origin ' .. main)
+      -- vim.cmd('!git fetch origin ' .. main)
       vim.cmd('DiffviewOpen origin/' .. main)
     end, { desc = 'Diff against main branch' })
 
-    vim.keymap.set('n', '<leader>gg', function()
+    vim.keymap.set('n', '<leader>gs', function()
       vim.cmd 'DiffviewOpen'
     end, { desc = 'Diff unstaged changes' })
 
     vim.keymap.set('n', '<leader>gF', function()
-      local current_dir = vim.fn.expand('%:p:h')
+      local current_dir = vim.fn.expand '%:p:h'
       vim.cmd('DiffviewFileHistory ' .. current_dir)
     end, { desc = 'Folder history' })
 
     vim.keymap.set('n', '<leader>gq', function()
       vim.cmd 'DiffviewClose'
     end, { desc = 'Close diffview' })
+
+    vim.keymap.set('n', '<leader>gy', function()
+      vim.notify('Committing and pushing...', vim.log.levels.INFO)
+      vim.fn.jobstart('git add -A && git commit -m "wip" && git push -u origin HEAD', {
+        on_exit = function(_, code)
+          vim.schedule(function()
+            if code == 0 then
+              vim.notify('Commit and push done', vim.log.levels.INFO)
+            else
+              vim.notify('Commit or push failed', vim.log.levels.ERROR)
+            end
+          end)
+        end,
+      })
+    end, { desc = 'Git yollo (commit all + push)' })
   end,
 }
 
@@ -172,7 +188,30 @@ local NeoGit = {
     },
   },
 }
+
+local LazyGit = {
+  'kdheepak/lazygit.nvim',
+  lazy = true,
+  cmd = {
+    'LazyGit',
+    'LazyGitConfig',
+    'LazyGitCurrentFile',
+    'LazyGitFilter',
+    'LazyGitFilterCurrentFile',
+  },
+  -- optional for floating window border decoration
+  dependencies = {
+    'nvim-lua/plenary.nvim',
+  },
+  -- setting the keybinding for LazyGit with 'keys' is recommended in
+  -- order to load the plugin when the command is run for the first time
+  keys = {
+    { '<leader>gg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+  },
+}
+
 return {
+  LazyGit,
   DiffView,
   NeoGit,
   GitSigns,
