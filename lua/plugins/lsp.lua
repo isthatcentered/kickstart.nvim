@@ -213,9 +213,14 @@ local LSP = {
     },
   },
   config = function()
+    
+require("luasnip.loaders.from_vscode").lazy_load({ paths = { "./snippets" } })
+
+
+
     local language_servers = {
       'lua_ls',
-      -- 'eslint',
+      'eslint',
       -- 'biome',
       -- 'ts_ls',
       'vtsls',

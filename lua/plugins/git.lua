@@ -109,13 +109,22 @@ local DiffView = {
 
     vim.keymap.set('n', '<leader>gy', function()
       vim.notify('Committing and pushing...', vim.log.levels.INFO)
-      vim.fn.jobstart('git add -A && git commit -m "wip" && git push -u origin HEAD', {
+      local stderr_chunks = {}
+      vim.fn.jobstart('git add -A && git commit -m "wip" && git push --force -u origin HEAD', {
+        on_stderr = function(_, data)
+          for _, line in ipairs(data) do
+            if line ~= '' then
+              table.insert(stderr_chunks, line)
+            end
+          end
+        end,
         on_exit = function(_, code)
           vim.schedule(function()
             if code == 0 then
               vim.notify('Commit and push done', vim.log.levels.INFO)
             else
-              vim.notify('Commit or push failed', vim.log.levels.ERROR)
+              local msg = table.concat(stderr_chunks, '\n')
+              vim.notify(msg ~= '' and msg or 'Commit or push failed', vim.log.levels.ERROR)
             end
           end)
         end,
