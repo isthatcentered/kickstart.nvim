@@ -161,8 +161,6 @@ local LSP = {
           },
         },
 
-        documentation = { auto_show = false, auto_show_delay_ms = 500, border = 'rounded', window = { border = 'rounded' } },
-
         completion = {
           menu = {
             auto_show = true,
@@ -175,6 +173,8 @@ local LSP = {
           },
 
           documentation = {
+            auto_show = true,
+            auto_show_delay_ms = 200,
             window = { border = 'rounded' },
           },
 
@@ -215,7 +215,7 @@ local LSP = {
   config = function()
     local language_servers = {
       'lua_ls',
-      'eslint',
+      -- 'eslint',
       -- 'biome',
       -- 'ts_ls',
       'vtsls',

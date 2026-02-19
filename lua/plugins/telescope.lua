@@ -83,6 +83,7 @@ return {
           -- hidden = true,
         }
       end, { desc = '[S]earch [F]iles' })
+
       vim.keymap.set('n', '<leader>sc', function()
         if string.match(utils.buffer_dir(), vim.fn.getcwd()) then
           builtin.find_files {
