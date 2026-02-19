@@ -91,8 +91,7 @@ local PERSONAL_PLUGINS = {
         return nope.listen(cb)
       end)
 
-
-      vim.api.nvim_create_autocmd({"VimLeavePre"}, {
+      vim.api.nvim_create_autocmd({ 'VimLeavePre' }, {
         callback = function()
           window_consumer:close()
         end,
@@ -105,6 +104,46 @@ local PERSONAL_PLUGINS = {
       vim.keymap.set('n', '<leader>ns', function()
         nope.stop_all()
       end, { desc = 'Stop all runnng tests' })
+
+      vim.keymap.set('n', '<leader>nf', function()
+        local file_path = vim.fn.expand '%:.' -- Expand file path relative to current working directory
+        local file_name = vim.fn.expand '%:t'
+        local config_path = nil
+
+        if vim.endswith(file_name, '.unit.test.ts') then
+          config_path = 'config/vitest.unit.config.ts'
+        elseif vim.endswith(file_name, '.integration.test.ts') then
+          config_path = 'config/vitest.integration.config.ts'
+        elseif vim.endswith(file_name, '.ts') then
+          config_path = 'vitest.config.ts'
+        else
+          error('Unknow test file ' .. file_name)
+        end
+
+        -- Return closest vitest config from file
+        -- File path = file_path - config path 
+
+        -- vim.print({
+        --   config_path = config_path,
+        --   file_path = file_path,
+        --   cwd = vim.uv.cwd(),
+        -- })
+        --
+        nope.start_run(RunConfiguration.new('Vitest', {
+          label = file_name,
+          watch = true,
+          configuration_path = config_path,
+          file_path = file_path,
+        }))
+      end, { desc = 'Run single file unit test' })
+
+      -- vim.keymap.set('n', '<leader>nu', function()
+      --   nope.start_run(RunConfiguration.new('Vitest', {
+      --     label = 'Unit:All',
+      --     watch = true,
+      --     configuration_path = 'config/vitest.unit.config.ts',
+      --   }))
+      -- end, { desc = 'Run all unit tests' })
     end,
   },
 }

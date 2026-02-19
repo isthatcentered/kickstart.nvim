@@ -349,7 +349,7 @@ vim.keymap.set('n', '<leader>f', ':IsThatCenteredFormatAction<cr>', { desc = 'Co
 vim.keymap.set('n', 'gri', ':IsThatCenteredImportAction<CR>', { desc = 'Remove unused imports' })
 vim.keymap.set('n', '<leader>ll', ':LspRestart<cr>', { desc = 'Restart lsp server' })
 
-vim.keymap.set('n', '<leader>d', ':%bd|e#<CR>', { desc = 'Close all bufferes except the current one' })
+vim.keymap.set('n', '<leader>D', ':%bd|e#<CR>', { desc = 'Close all bufferes except the current one' })
 
 ---------------------------------------------------
 -- UTilS shortcuts

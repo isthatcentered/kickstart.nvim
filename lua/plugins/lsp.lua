@@ -270,6 +270,18 @@ local LSP = {
       },
     })
 
+    vim.lsp.config('lua_ls', {
+      settings = {
+        Lua = {
+          workspace = {
+            checkThirdParty = false,
+            ignoreDir = { '__lua__', '.git', 'node_modules', '.dist', '.temp' },
+          },
+          telemetry = { enable = false },
+        },
+      },
+    })
+
     vim.lsp.config('ts_ls', {
       settings = {
         supportsMoveToFileCodeAction = true,
