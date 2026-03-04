@@ -153,6 +153,7 @@ require 'isthatcentered/load_custom_plugins'
 require 'isthatcentered.diagnostics'
 require 'isthatcentered.autosave'
 require 'isthatcentered.autorun'
+require 'isthatcentered.review'
 vim.opt.background = 'light'
 vim.g.colors_name = 'acid'
 require('acid').setup()

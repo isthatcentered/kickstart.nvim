@@ -214,7 +214,9 @@ local LSP = {
   },
   config = function()
     
-require("luasnip.loaders.from_vscode").lazy_load({ paths = { "./snippets" } })
+require('luasnip.loaders.from_vscode').lazy_load({
+  paths = { vim.fn.stdpath('config') .. '/snippets' },
+})
 
 
 
@@ -258,7 +260,7 @@ require("luasnip.loaders.from_vscode").lazy_load({ paths = { "./snippets" } })
         },
         typescript = {
           tsserver = {
-            maxTsServerMemory = 8192,
+            maxTsServerMemory = 4000,
           },
           updateImportsOnFileMove = {
             enabled = 'always',
@@ -270,6 +272,7 @@ require("luasnip.loaders.from_vscode").lazy_load({ paths = { "./snippets" } })
           },
           preferences = {
             importModuleSpecifier = 'non-relative',
+            preferTypeOnlyAutoImports = false,
           },
         },
       },

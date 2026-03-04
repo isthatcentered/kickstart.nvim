@@ -50,7 +50,7 @@ local DiffView = {
           for _, win in ipairs(vim.api.nvim_tabpage_list_wins(view.tabpage)) do
             vim.wo[win].relativenumber = true
           end
-          vim.keymap.set('n', '<Esc><Esc>', function()
+          vim.keymap.set('n', 'q', function()
             if vim.api.nvim_get_current_tabpage() == view.tabpage then
               vim.cmd 'DiffviewClose'
             end
