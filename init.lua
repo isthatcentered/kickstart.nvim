@@ -34,7 +34,7 @@ vim.opt.backup = false -- Don't create backup files
 vim.opt.writebackup = false -- Don't create backup before writing
 vim.opt.swapfile = false -- Don't create swap files
 vim.opt.undofile = true -- Persistent undo
-vim.opt.updatetime = 100 -- Faster completion
+vim.opt.updatetime = 250 -- Faster completion
 vim.opt.timeoutlen = 300 -- Key timeout duration
 vim.opt.autoread = true -- Auto reload files changed outside vim
 vim.opt.autowrite = true -- Auto save
@@ -177,7 +177,7 @@ vim.api.nvim_create_user_command('BufferOpenLastClosed', function()
 end, {})
 
 vim.api.nvim_create_user_command('Shada', function()
-  local shada_dir = vim.fn.stdpath('state') .. '/shada'
+  local shada_dir = vim.fn.stdpath 'state' .. '/shada'
   local pattern = shada_dir .. '/main.shada.tmp.*'
   local files = vim.fn.glob(pattern, false, true)
 
