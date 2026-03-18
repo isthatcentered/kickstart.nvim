@@ -64,6 +64,34 @@
     "prefix": "tbranded",
     "body": "export type $1 = Brand.Branded<string, '${1/(.*)/${1:/upcase}/}'>"
   },
+  "Export Tagged Schema Class": {
+    "prefix": "stclass",
+    "body": [
+      "export class $1 extends Schema.TaggedClass<$1>()(\"$1\", {",
+      "  $2",
+      "}) {",
+      "  static random = factory(",
+      "    $1,",
+      "    (sample, overrides) => new $1({ ...sample, ...overrides }),",
+      "  );",
+      "}"
+    ],
+    "description": "Export an Effect Schema.Class with a factory helper"
+  },
+  "Export Schema Class": {
+    "prefix": "sclass",
+    "body": [
+      "export class $1 extends Schema.Class<$1>(\"$1\")({",
+      "  $2",
+      "}) {",
+      "  static random = factory(",
+      "    $1,",
+      "    (sample, overrides) => new $1({ ...sample, ...overrides }),",
+      "  );",
+      "}"
+    ],
+    "description": "Export an Effect Schema.Class with a factory helper"
+  },
   "hole": {
     "prefix": "hole",
     "body": "(a)=> a,"
