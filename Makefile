@@ -1,5 +1,7 @@
 .PHONY: test test-watch test-watch-file setup-lua clean
 
+PLENARY_DIR ?= /tmp/plenary.nvim
+
 LUA_DIR := __lua__
 LUA_ACTIVATE := $(LUA_DIR)/bin/activate
 LUA_VERSION := 5.1.1
@@ -27,20 +29,21 @@ setup-lua:
 	fi
 
 # Run all tests once
-test: setup-lua
-	nvim --headless --noplugin -u scripts/minimal_init.vim -c "PlenaryBustedDirectory lua/ {minimal_init = 'scripts/minimal_init.vim'}"
+test:
+	PLENARY_DIR=$(PLENARY_DIR) nvim --headless --noplugin -u scripts/minimal_init.lua \
+		-c "PlenaryBustedDirectory lua/ {minimal_init = 'scripts/minimal_init.lua'}"
 
 # Watch lua folder and run tests on changes
-test-watch: setup-lua
+test-watch:
 	@trap 'exit 0' INT; \
 	while true; do \
-		find lua/ -name "*.lua" | entr -r sh -c 'nvim --headless --noplugin -u scripts/minimal_init.vim -c "PlenaryBustedDirectory lua/ {minimal_init = '\''scripts/minimal_init.vim'\''}" 2>&1; exit 0' || break; \
+		find lua/ -name "*.lua" | entr -r sh -c 'PLENARY_DIR=$(PLENARY_DIR) nvim --headless --noplugin -u scripts/minimal_init.lua -c "PlenaryBustedDirectory lua/ {minimal_init = '\''scripts/minimal_init.lua'\''}" 2>&1; exit 0' || break; \
 		sleep 0.1; \
 	done
 
 # Watch lua folder and run tests for a specific file
 # Usage: make test-watch-file lua/scoped/init_spec.lua
-test-watch-file: setup-lua
+test-watch-file:
 	@FILE="$(filter-out test-watch-file,$@)"; \
 	if [ -z "$(word 2,$(MAKECMDGOALS))" ]; then \
 		echo "Error: File path required. Usage: make test-watch-file lua/path/to/test_spec.lua"; \
@@ -49,7 +52,7 @@ test-watch-file: setup-lua
 	FILE="$(word 2,$(MAKECMDGOALS))"; \
 	trap 'exit 0' INT; \
 	while true; do \
-		find lua/ -name "*.lua" | entr -r sh -c "nvim --headless --noplugin -u scripts/minimal_init.vim -c \"PlenaryBustedFile $$FILE\" 2>&1; exit 0" || break; \
+		find lua/ -name "*.lua" | entr -r sh -c "PLENARY_DIR=$(PLENARY_DIR) nvim --headless --noplugin -u scripts/minimal_init.lua -c \"PlenaryBustedFile $$FILE\" 2>&1; exit 0" || break; \
 		sleep 0.1; \
 	done
 
