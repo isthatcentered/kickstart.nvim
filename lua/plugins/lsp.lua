@@ -222,7 +222,7 @@ require('luasnip.loaders.from_vscode').lazy_load({
 
     local language_servers = {
       'lua_ls',
-      'eslint',
+      -- 'eslint',
       -- 'biome',
       -- 'ts_ls',
       'vtsls',
@@ -257,6 +257,7 @@ require('luasnip.loaders.from_vscode').lazy_load({
       settings = {
         vtsls = {
           enableMoveToFileCodeAction = true,
+          autoUseWorkspaceTsdk = true,
         },
         typescript = {
           tsserver = {
