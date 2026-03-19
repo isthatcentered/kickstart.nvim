@@ -85,6 +85,7 @@ local LANGUAGE_SERVERS = {
   'biome',
   'eslint-lsp',
   'eslint_d',
+  'oxfmt',
   'prettier',
   'prettierd',
   'typescript-language-server',
@@ -107,6 +108,7 @@ local LSP = {
           'biome',
           'eslint-lsp',
           'eslint_d',
+          'oxfmt',
           'prettier',
           'prettierd',
           'typescript-language-server',
@@ -213,12 +215,9 @@ local LSP = {
     },
   },
   config = function()
-    
-require('luasnip.loaders.from_vscode').lazy_load({
-  paths = { vim.fn.stdpath('config') .. '/snippets' },
-})
-
-
+    require('luasnip.loaders.from_vscode').lazy_load {
+      paths = { vim.fn.stdpath 'config' .. '/snippets' },
+    }
 
     local language_servers = {
       'lua_ls',
