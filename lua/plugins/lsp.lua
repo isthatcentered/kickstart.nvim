@@ -86,6 +86,7 @@ local LANGUAGE_SERVERS = {
   'eslint-lsp',
   'eslint_d',
   'oxfmt',
+  'oxlint',
   'prettier',
   'prettierd',
   'typescript-language-server',
@@ -109,6 +110,7 @@ local LSP = {
           'eslint-lsp',
           'eslint_d',
           'oxfmt',
+          'oxlint',
           'prettier',
           'prettierd',
           'typescript-language-server',
@@ -219,10 +221,13 @@ local LSP = {
       paths = { vim.fn.stdpath 'config' .. '/snippets' },
     }
 
+    local util = require 'lspconfig.util'
+
     local language_servers = {
       'lua_ls',
       -- 'eslint',
       -- 'biome',
+      'oxlint',
       -- 'ts_ls',
       'vtsls',
       'emmet_language_server',
@@ -250,6 +255,9 @@ local LSP = {
     }
 
     vim.lsp.config('*', { capabilities = capabilities })
+    vim.lsp.config('oxlint', {
+      root_dir = util.root_pattern('package.json', 'tsconfig.json', 'jsconfig.json', '.git'),
+    })
 
     require('lspconfig.configs').vtsls = require('vtsls').lspconfig
     vim.lsp.config('vtsls', {

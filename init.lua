@@ -206,7 +206,31 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
 
   local typescript_vtsls_client = vim.lsp.get_clients({ name = 'vtsls', buffnr = bufnr })[1]
   local typescript_ts_ls_client = vim.lsp.get_clients({ name = 'ts_ls', buffnr = bufnr })[1]
+  local oxlint_client = vim.lsp.get_clients({ name = 'oxlint', buffnr = bufnr })[1]
   local eslint_client = vim.lsp.get_clients({ name = 'eslint', buffnr = bufnr })[1]
+
+  local function run_oxlint_fix_all(cb)
+    if not oxlint_client then
+      cb()
+      return
+    end
+
+    oxlint_client:exec_cmd({
+      title = 'Apply Oxlint automatic fixes',
+      command = 'oxc.fixAll',
+      arguments = {
+        {
+          uri = vim.uri_from_bufnr(bufnr),
+        },
+      },
+    }, { bufnr = bufnr }, function(err)
+      if err then
+        vim.print(err)
+      end
+
+      cb()
+    end)
+  end
 
   if not string.find(filetype, '^typescript') then
     return
@@ -239,21 +263,23 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
               client = typescript_ts_ls_client,
               kinds = { 'source.organizeImports.ts' },
               cb = function()
-                if eslint_client then
-                  eslint_client:request('workspace/executeCommand', {
-                    command = 'eslint.applyAllFixes',
-                    arguments = {
-                      {
-                        uri = vim.uri_from_bufnr(0),
-                        version = vim.lsp.util.buf_versions[bufnr],
+                run_oxlint_fix_all(function()
+                  if eslint_client then
+                    eslint_client:request('workspace/executeCommand', {
+                      command = 'eslint.applyAllFixes',
+                      arguments = {
+                        {
+                          uri = vim.uri_from_bufnr(0),
+                          version = vim.lsp.util.buf_versions[bufnr],
+                        },
                       },
-                    },
-                  }, function(err)
-                    if err then
-                      vim.print(err)
-                    end
-                  end, bufnr)
-                end
+                    }, function(err)
+                      if err then
+                        vim.print(err)
+                      end
+                    end, bufnr)
+                  end
+                end)
               end,
             }
           end,
@@ -271,24 +297,30 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
       },
     }, { bufnr = vim.api.nvim_get_current_buf() }, function()
       if not eslint_client then
-        require('vtsls').commands.organize_imports(0, function() end, function() end)
+        require('vtsls').commands.organize_imports(0, function()
+          run_oxlint_fix_all(function() end)
+        end, function()
+          run_oxlint_fix_all(function() end)
+        end)
         -- Add missing imports?
         return
       end
 
-      eslint_client:request('workspace/executeCommand', {
-        command = 'eslint.applyAllFixes',
-        arguments = {
-          {
-            uri = vim.uri_from_bufnr(0),
-            version = vim.lsp.util.buf_versions[bufnr],
+      run_oxlint_fix_all(function()
+        eslint_client:request('workspace/executeCommand', {
+          command = 'eslint.applyAllFixes',
+          arguments = {
+            {
+              uri = vim.uri_from_bufnr(0),
+              version = vim.lsp.util.buf_versions[bufnr],
+            },
           },
-        },
-      }, function(err)
-        if err then
-          vim.print(err)
-        end
-      end, bufnr)
+        }, function(err)
+          if err then
+            vim.print(err)
+          end
+        end, bufnr)
+      end)
     end)
   end
 
