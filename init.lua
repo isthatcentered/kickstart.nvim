@@ -440,26 +440,10 @@ vim.keymap.set('n', '<leader>uf', function()
 end, { desc = '[U]til get current [F]ile name' })
 
 vim.keymap.set({ 'n', 'v' }, '<leader>ul', function()
-  local relative_path = vim.fn.expand '%'
-  local mode = vim.fn.mode()
-
-  local result
-  if mode == 'v' or mode == 'V' or mode == '\22' then
-    -- Visual mode: get selection range
-    -- Exit visual mode to update '< and '> marks
-    vim.cmd 'normal! '
-    local start_line = vim.fn.line "'<"
-    local end_line = vim.fn.line "'>"
-    if start_line == end_line then
-      result = relative_path .. '#L' .. start_line
-    else
-      result = relative_path .. '#L' .. start_line .. '-L' .. end_line
-    end
-  else
-    -- Normal mode: use current line (1-indexed, which GitHub expects)
-    local line = vim.fn.line '.'
-    result = relative_path .. '#L' .. line
-  end
+  local relative_path = vim.fn.expand '%:p' -- '%' for relative
+  -- Normal mode: use current line (1-indexed, which GitHub expects)
+  local line = vim.fn.line '.'
+  result = relative_path .. '#L' .. line
 
   vim.fn.setreg('+', result)
   vim.print(result)

@@ -15,45 +15,37 @@ local Typecheck = {
   },
 }
 
-local Trouble = {
-  "folke/trouble.nvim",
-  opts = {}, -- for default options, refer to the configuration section for custom setup.
-  cmd = "Trouble",
-  keys = {
-    {
-      "<leader>Td",
-      "<cmd>Trouble diagnostics toggle<cr>",
-      desc = "Diagnostics (Trouble)",
-    },
-    {
-      "<leader>TD",
-      "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
-      desc = "Buffer Diagnostics (Trouble)",
-    },
-    {
-      "<leader>cs",
-      "<cmd>Trouble symbols toggle focus=false<cr>",
-      desc = "Symbols (Trouble)",
-    },
-    {
-      "<leader>cl",
-      "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
-      desc = "LSP Definitions / references / ... (Trouble)",
-    },
-    {
-      "<leader>xL",
-      "<cmd>Trouble loclist toggle<cr>",
-      desc = "Location List (Trouble)",
-    },
-    {
-      "<leader>xQ",
-      "<cmd>Trouble qflist toggle<cr>",
-      desc = "Quickfix List (Trouble)",
-    },
-  },
+local TSC = {
+  'dmmulroy/tsc.nvim',
+  config = function()
+    require('tsc').setup {
+
+      auto_open_qflist = true,
+      auto_close_qflist = true,
+      auto_focus_qflist = false,
+      auto_start_watch_mode = false,
+      use_trouble_qflist = false,
+      use_diagnostics = false,
+      run_as_monorepo = false,
+      bin_name = 'tsgo',
+      enable_progress_notifications = true,
+      enable_error_notifications = true,
+      flags = {
+        noEmit = true,
+        -- project = function()
+        --   return utils.find_nearest_tsconfig()
+        -- end,
+        watch = false,
+      },
+      hide_progress_notifications_from_history = true,
+      pretty_errors = true,
+    }
+
+
+    vim.keymap.set("n", "<leader>ck", ":TSC<CR>")
+  end,
 }
 
 return {
-  -- Trouble,
-  Typecheck,
+  TSC
 }
