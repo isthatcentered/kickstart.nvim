@@ -187,7 +187,7 @@ local Oil = {
         ['<C-d>'] = { 'actions.preview_scroll_down' },
         ['<C-u>'] = { 'actions.preview_scroll_up' },
         ['<C-v>'] = { 'actions.select', opts = { vertical = true } },
-        ['<esc><esc>'] = { 'actions.close', mode = 'n' },
+        ['q'] = { 'actions.close', mode = 'n' },
       },
     }
     vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open file explorer' })
