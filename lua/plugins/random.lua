@@ -165,10 +165,9 @@ local Oil = {
     require('oil').setup {
       view_options = {
         show_hidden = true,
-        is_hidden_file = function ()
-
+        is_hidden_file = function()
           return false
-        end
+        end,
       },
       watch_for_changes = true,
       lsp_file_methods = {
@@ -178,7 +177,7 @@ local Oil = {
         timeout_ms = 20 * 1000,
         -- Set to true to autosave buffers that are updated with LSP willRenameFiles
         -- Set to "unmodified" to only save unmodified buffers
-        autosave_changes = false,
+        autosave_changes = true,
       },
 
       preview_win = {
@@ -339,7 +338,7 @@ return {
   -- NeoTree,
   { 'nvim-tree/nvim-web-devicons', opts = {} },
   TextCase,
- Oil,
+  Oil,
   -- ShowKeys,
   SmoothScroll,
   AutoTag,

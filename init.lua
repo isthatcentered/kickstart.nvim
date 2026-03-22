@@ -37,7 +37,7 @@ vim.opt.undofile = true -- Persistent undo
 vim.opt.updatetime = 250 -- Faster completion
 vim.opt.timeoutlen = 300 -- Key timeout duration
 vim.opt.autoread = true -- Auto reload files changed outside vim
-vim.opt.autowrite = true -- Auto save
+vim.opt.autowrite = false -- Let checktime + autosave drive writes explicitly
 
 -- Behavior settings
 vim.opt.nrformats:append 'alpha'
@@ -128,6 +128,22 @@ end)
 
 local augroup = vim.api.nvim_create_augroup('userconfig', {})
 
+local function is_file_buffer(bufferId)
+  local buffer = vim.bo[bufferId]
+
+  return vim.api.nvim_buf_get_name(bufferId) ~= '' and buffer.buftype == ''
+end
+
+local function check_current_buffer_timestamp()
+  local bufferId = vim.api.nvim_get_current_buf()
+
+  if vim.fn.mode() == 'c' or not is_file_buffer(bufferId) then
+    return
+  end
+
+  vim.cmd('checktime ' .. bufferId)
+end
+
 -- disable line numbers in terminal
 vim.api.nvim_create_autocmd('termopen', {
   group = augroup,
@@ -143,6 +159,28 @@ vim.api.nvim_create_autocmd('vimresized', {
   group = augroup,
   callback = function()
     vim.cmd 'tabdo wincmd ='
+  end,
+})
+
+vim.api.nvim_create_autocmd({ 'BufEnter', 'FocusGained', 'TermClose', 'TermLeave' }, {
+  group = augroup,
+  callback = check_current_buffer_timestamp,
+})
+
+vim.api.nvim_create_autocmd('FileChangedShell', {
+  group = augroup,
+  callback = function(args)
+    if not is_file_buffer(args.buf) then
+      return
+    end
+
+    vim.v.fcs_choice = 'reload'
+
+    vim.schedule(function()
+      local fileName = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(args.buf), ':~:.')
+
+      vim.notify('Reloaded externally changed file: ' .. fileName, vim.log.levels.WARN)
+    end)
   end,
 })
 
