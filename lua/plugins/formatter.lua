@@ -8,6 +8,7 @@ return {
       lsp_format = 'never',
       format_on_save = false,
       formatters_by_ft = {
+        go = { 'goimports', 'gofmt' },
         lua = { 'stylua' },
         python = { 'isort', 'black' },
         rust = { 'rustfmt', lsp_format = 'fallback' },

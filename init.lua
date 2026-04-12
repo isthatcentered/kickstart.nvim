@@ -1,3 +1,4 @@
+require('vim._core.ui2').enable({})
 -- Basic settings
 vim.opt.number = true -- Line numbers
 vim.opt.relativenumber = true -- Relative line numbers

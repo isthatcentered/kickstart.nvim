@@ -4,10 +4,44 @@
     "body": "console.log(\"🛑:::\", $1)",
     "description": "Log marker with value"
   },
+
+  "Export Class": {
+    "prefix": "tclass",
+    "body": "export class $1 extends Data.Class<{$2}>{}",
+    "description": "Export a Data.Class with a type param"
+  },
   "Export Tagged Class": {
     "prefix": "ttagged",
     "body": "export class $1 extends Data.TaggedClass(\"$1\")<{$2}>{}",
     "description": "Export a Data.TaggedClass with a type param"
+  },
+  "test": {
+    "prefix": "test",
+    "body": [
+      "test(`$1`, () => {",
+      " $2",
+      "})"
+    ]
+  },
+  "testeffect": {
+    "prefix": "ttest",
+    "body": [
+      "test(`$1`, () => pipe(",
+      "Effect.gen(function*(){",
+      " $2",
+      "}),",
+      "Effect.provide(dependencies),",
+      "Effect.runPromise, ",
+      "))"
+    ]
+  },
+  "describe": {
+    "prefix": "desc",
+    "body": [
+      "describe(`$1`, () => {",
+      " $2",
+      "})"
+    ]
   },
   "Gen": {
     "prefix": "tgen",
@@ -45,7 +79,7 @@
     ]
   },
   "Export Service Class": {
-    "prefix": "service",
+    "prefix": "tservice",
     "body": " export class $1 extends Effect.Tag('$1')<$1, {$2}>() {}"
   },
   "Log effect value": {
@@ -65,29 +99,21 @@
     "body": "export type $1 = Brand.Branded<string, '${1/(.*)/${1:/upcase}/}'>"
   },
   "Export Tagged Schema Class": {
-    "prefix": "stclass",
+    "prefix": "ttaggedschemaclass",
     "body": [
       "export class $1 extends Schema.TaggedClass<$1>()(\"$1\", {",
       "  $2",
       "}) {",
-      "  static random = factory(",
-      "    $1,",
-      "    (sample, overrides) => new $1({ ...sample, ...overrides }),",
-      "  );",
       "}"
     ],
     "description": "Export an Effect Schema.Class with a factory helper"
   },
   "Export Schema Class": {
-    "prefix": "sclass",
+    "prefix": "tschemaclass",
     "body": [
       "export class $1 extends Schema.Class<$1>(\"$1\")({",
       "  $2",
       "}) {",
-      "  static random = factory(",
-      "    $1,",
-      "    (sample, overrides) => new $1({ ...sample, ...overrides }),",
-      "  );",
       "}"
     ],
     "description": "Export an Effect Schema.Class with a factory helper"

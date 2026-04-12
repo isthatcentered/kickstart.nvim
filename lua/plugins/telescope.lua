@@ -76,6 +76,31 @@ return {
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
       local utils = require 'telescope.utils'
+      local function find_all_files(opts)
+        opts = opts or {}
+
+        builtin.find_files {
+          cwd = opts.cwd,
+          default_text = opts.default_text,
+          find_command = {
+            'fd',
+            '--type',
+            'f',
+            '--strip-cwd-prefix',
+            '--hidden',
+            '--no-ignore',
+            '--exclude',
+            '.git',
+            '--exclude',
+            'node_modules',
+            '--exclude',
+            'dist',
+            '--exclude',
+            '.cache',
+          },
+        }
+      end
+
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', function()
@@ -83,6 +108,7 @@ return {
           -- hidden = true,
         }
       end, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<leader>sF', find_all_files, { desc = '[S]earch all [F]iles' })
 
       vim.keymap.set('n', '<leader>sc', function()
         if string.match(utils.buffer_dir(), vim.fn.getcwd()) then

@@ -121,7 +121,7 @@ local PERSONAL_PLUGINS = {
         end
 
         -- Return closest vitest config from file
-        -- File path = file_path - config path 
+        -- File path = file_path - config path
 
         -- vim.print({
         --   config_path = config_path,

@@ -43,6 +43,9 @@ local TreeSitter = {
     -- No need to call setup when using the default config
     local languages = {
       'c', --
+      'go',
+      'gomod',
+      'gowork',
       'lua',
       'vim',
       'vimdoc',
@@ -85,6 +88,8 @@ local LANGUAGE_SERVERS = {
   'biome',
   'eslint-lsp',
   'eslint_d',
+  'goimports',
+  'gopls',
   'oxfmt',
   'oxlint',
   'prettier',
@@ -109,6 +114,8 @@ local LSP = {
           'biome',
           'eslint-lsp',
           'eslint_d',
+          'goimports',
+          'gopls',
           'oxfmt',
           'oxlint',
           'prettier',
@@ -221,11 +228,10 @@ local LSP = {
       paths = { vim.fn.stdpath 'config' .. '/snippets' },
     }
 
-    local util = require 'lspconfig.util'
-
     local language_servers = {
       'lua_ls',
-      -- 'eslint',
+      'eslint',
+      'gopls',
       -- 'biome',
       'oxlint',
       -- 'ts_ls',
@@ -255,12 +261,9 @@ local LSP = {
     }
 
     vim.lsp.config('*', { capabilities = capabilities })
-    vim.lsp.config('oxlint', {
-      root_dir = util.root_pattern('package.json', 'tsconfig.json', 'jsconfig.json', '.git'),
-    })
-
     require('lspconfig.configs').vtsls = require('vtsls').lspconfig
     vim.lsp.config('vtsls', {
+      ---@type lspconfig.settings.vtsls
       settings = {
         vtsls = {
           enableMoveToFileCodeAction = true,

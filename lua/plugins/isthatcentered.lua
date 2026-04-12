@@ -4,13 +4,22 @@ return {
     name = 'refactor.nvim',
     keys = {
       {
-        '<leader>grq',
+        'grq',
         function()
           local Refactor = require 'refactor'
 
           Refactor.typescript.replace_with_template_string(Refactor.context())
         end,
         desc = 'Replace with template string',
+      },
+      {
+        'grif',
+        function()
+          local Refactor = require 'refactor'
+
+          Refactor.typescript.inline_function(Refactor.context())
+        end,
+        desc = 'Inline function',
       },
     },
   },
