@@ -1,4 +1,4 @@
-require('vim._core.ui2').enable({})
+require('vim._core.ui2').enable {}
 -- Basic settings
 vim.opt.number = true -- Line numbers
 vim.opt.relativenumber = true -- Relative line numbers
@@ -236,9 +236,9 @@ vim.keymap.set('n', '<M-w>', ':BufferClose<cr>', { desc = 'Close current buffer 
 vim.keymap.set('n', '<M-W>', ':BufferOpenLastClosed<cr>', { desc = 'Open last closed buffer' })
 
 local lsp_utils = require 'isthatcentered.utils.lsp'
+local lint_fixers = require 'isthatcentered.lint_fixers'
 vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
   local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = vim.bo
   local filetype = vim.bo.filetype
 
   require('conform').format { async = false }
@@ -248,30 +248,40 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
   local oxlint_client = vim.lsp.get_clients({ name = 'oxlint', buffnr = bufnr })[1]
   local eslint_client = vim.lsp.get_clients({ name = 'eslint', buffnr = bufnr })[1]
 
-  local function run_oxlint_fix_all(cb)
-    if not oxlint_client then
-      cb()
-      return
-    end
-
-    oxlint_client:exec_cmd({
-      title = 'Apply Oxlint automatic fixes',
-      command = 'oxc.fixAll',
-      arguments = {
-        {
-          uri = vim.uri_from_bufnr(bufnr),
-        },
-      },
-    }, { bufnr = bufnr }, function(err)
-      if err then
-        vim.print(err)
-      end
-
-      cb()
-    end)
+  local function run_lint_fixers(cb)
+    lint_fixers.run {
+      bufnr = bufnr,
+      eslint_client = eslint_client,
+      oxlint_client = oxlint_client,
+      cb = cb,
+    }
   end
 
   if not string.find(filetype, '^typescript') then
+    run_lint_fixers(function() end)
+    return
+  end
+
+  if typescript_vtsls_client then
+    typescript_vtsls_client:exec_cmd({
+      title = 'Remove unused imports',
+      command = 'typescript.removeUnusedImports',
+      arguments = {
+        vim.api.nvim_buf_get_name(bufnr),
+      },
+    }, { bufnr = vim.api.nvim_get_current_buf() }, function()
+      if not eslint_client then
+        require('vtsls').commands.organize_imports(0, function()
+          run_lint_fixers(function() end)
+        end, function()
+          run_lint_fixers(function() end)
+        end)
+        -- Add missing imports?
+        return
+      end
+
+      run_lint_fixers(function() end)
+    end)
     return
   end
 
@@ -302,66 +312,17 @@ vim.api.nvim_create_user_command('IsThatCenteredFormatAction', function()
               client = typescript_ts_ls_client,
               kinds = { 'source.organizeImports.ts' },
               cb = function()
-                run_oxlint_fix_all(function()
-                  if eslint_client then
-                    eslint_client:request('workspace/executeCommand', {
-                      command = 'eslint.applyAllFixes',
-                      arguments = {
-                        {
-                          uri = vim.uri_from_bufnr(0),
-                          version = vim.lsp.util.buf_versions[bufnr],
-                        },
-                      },
-                    }, function(err)
-                      if err then
-                        vim.print(err)
-                      end
-                    end, bufnr)
-                  end
-                end)
+                run_lint_fixers(function() end)
               end,
             }
           end,
         }
       end,
     }
+    return
   end
 
-  if typescript_vtsls_client then
-    typescript_vtsls_client:exec_cmd({
-      title = 'Remove unused imports',
-      command = 'typescript.removeUnusedImports',
-      arguments = {
-        vim.api.nvim_buf_get_name(bufnr),
-      },
-    }, { bufnr = vim.api.nvim_get_current_buf() }, function()
-      if not eslint_client then
-        require('vtsls').commands.organize_imports(0, function()
-          run_oxlint_fix_all(function() end)
-        end, function()
-          run_oxlint_fix_all(function() end)
-        end)
-        -- Add missing imports?
-        return
-      end
-
-      run_oxlint_fix_all(function()
-        eslint_client:request('workspace/executeCommand', {
-          command = 'eslint.applyAllFixes',
-          arguments = {
-            {
-              uri = vim.uri_from_bufnr(0),
-              version = vim.lsp.util.buf_versions[bufnr],
-            },
-          },
-        }, function(err)
-          if err then
-            vim.print(err)
-          end
-        end, bufnr)
-      end)
-    end)
-  end
+  run_lint_fixers(function() end)
 
   -- vim.lsp.buf.code_action { apply = true, context = { only = { 'source.addMissingImports' }, diagnostics = {} } }
 

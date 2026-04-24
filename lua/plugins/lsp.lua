@@ -282,6 +282,7 @@ local LSP = {
             showOnInterfaceMethods = true,
           },
           preferences = {
+            useAliasesForRenames = false,
             importModuleSpecifier = 'non-relative',
             preferTypeOnlyAutoImports = false,
           },
