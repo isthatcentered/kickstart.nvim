@@ -29,7 +29,25 @@ local DiffView = {
   config = function()
     local diffview = require 'diffview'
 
+    local function set_diff_winhl(winid, replacements)
+      local parts = {}
+
+      for item in vim.wo[winid].winhighlight:gmatch '[^,]+' do
+        local from = item:match '^([^:]+):'
+        if from and not replacements[from] then
+          table.insert(parts, item)
+        end
+      end
+
+      for from, to in pairs(replacements) do
+        table.insert(parts, from .. ':' .. to)
+      end
+
+      vim.wo[winid].winhighlight = table.concat(parts, ',')
+    end
+
     diffview.setup {
+      enhanced_diff_hl = true,
       view = {
         default = {
           diff_args = { '--ignore-all-space', '-U99999' },
@@ -43,8 +61,33 @@ local DiffView = {
       },
       hooks = {
         diff_buf_read = function()
+          local fillchars = vim.opt_local.fillchars:get()
+          fillchars.diff = ' '
+          vim.opt_local.fillchars = fillchars
+
           vim.opt_local.foldenable = false
           vim.opt_local.relativenumber = true
+        end,
+        diff_buf_win_enter = function(_, winid, ctx)
+          if not ctx.layout_name:match '^diff2' then
+            return
+          end
+
+          if ctx.symbol == 'a' then
+            set_diff_winhl(winid, {
+              DiffAdd = 'DiffviewOldLine',
+              DiffDelete = 'DiffviewMissingLine',
+              DiffChange = 'DiffviewOldLine',
+              DiffText = 'DiffviewOldText',
+            })
+          elseif ctx.symbol == 'b' then
+            set_diff_winhl(winid, {
+              DiffAdd = 'DiffviewNewLine',
+              DiffChange = 'DiffviewNewLine',
+              DiffText = 'DiffviewNewText',
+              DiffDelete = 'DiffviewMissingLine',
+            })
+          end
         end,
         view_opened = function(view)
           for _, win in ipairs(vim.api.nvim_tabpage_list_wins(view.tabpage)) do
