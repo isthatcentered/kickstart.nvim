@@ -136,6 +136,7 @@ local LSP = {
       'saghen/blink.cmp',
 
       dependencies = {
+        'saghen/blink.lib',
         'L3MON4D3/LuaSnip',
         -- follow latest release.
         version = 'v2.*', -- Replace <CurrentMajor> by the latest released major (first number of latest release)
@@ -143,7 +144,9 @@ local LSP = {
         build = 'make install_jsregexp',
       },
 
-      build = 'cargo build --release',
+      build = function()
+        require('blink.cmp').build():wait(60000)
+      end,
 
       opts = {
         -- 'super-tab' for mappings similar to vscode (tab to accept)
@@ -430,6 +433,5 @@ return {
   LazyDev,
   TreeSitter,
   TreesitterTextObjects,
-  Refactoring,
   LSP,
 }

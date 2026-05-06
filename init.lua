@@ -382,7 +382,42 @@ vim.keymap.set('n', '<leader>f', ':IsThatCenteredFormatAction<cr>', { desc = 'Co
 vim.keymap.set('n', 'gri', ':IsThatCenteredImportAction<CR>', { desc = 'Remove unused imports' })
 vim.keymap.set('n', '<leader>ll', ':LspRestart<cr>', { desc = 'Restart lsp server' })
 
-vim.keymap.set('n', '<leader>D', ':%bd|e#<CR>', { desc = 'Close all bufferes except the current one' })
+vim.keymap.set('n', '<leader>D', function()
+  local visible_buffers = {}
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    visible_buffers[vim.api.nvim_win_get_buf(win)] = true
+  end
+
+  local closed_count = 0
+  local failed_count = 0
+
+  for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buffer) and vim.bo[buffer].buflisted and not visible_buffers[buffer] then
+      local ok = pcall(vim.cmd.bdelete, buffer)
+
+      if ok then
+        closed_count = closed_count + 1
+      else
+        failed_count = failed_count + 1
+      end
+    end
+  end
+
+  local message = 'Closed ' .. closed_count .. ' hidden buffer'
+  if closed_count ~= 1 then
+    message = message .. 's'
+  end
+
+  if failed_count > 0 then
+    message = message .. ', skipped ' .. failed_count .. ' modified buffer'
+    if failed_count ~= 1 then
+      message = message .. 's'
+    end
+  end
+
+  vim.notify(message)
+end, { desc = 'Close all buffers except displayed ones' })
 
 ---------------------------------------------------
 -- UTilS shortcuts

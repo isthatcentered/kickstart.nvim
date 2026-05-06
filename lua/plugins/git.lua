@@ -24,10 +24,103 @@ local function get_current_branch()
   return nil
 end
 
+local function get_branch_commits(main, current)
+  local args = {
+    'git',
+    'log',
+    '--format=%H%x1f%h%x1f%cr%x1f%s',
+  }
+
+  if current == main then
+    vim.list_extend(args, { '-n', '20', 'HEAD' })
+  else
+    table.insert(args, 'origin/' .. main .. '..HEAD')
+  end
+
+  local lines = vim.fn.systemlist(args)
+  if vim.v.shell_error ~= 0 then
+    return nil
+  end
+
+  local commits = {}
+  for _, line in ipairs(lines) do
+    local hash, short_hash, relative_date, subject = line:match '^([^\31]+)\31([^\31]+)\31([^\31]+)\31(.*)$'
+    if hash then
+      table.insert(commits, {
+        hash = hash,
+        short_hash = short_hash,
+        relative_date = relative_date,
+        subject = subject,
+      })
+    end
+  end
+
+  return commits
+end
+
+local function get_commit_parent(commit)
+  local parent = vim.fn.systemlist { 'git', 'rev-parse', commit.hash .. '^' }
+  if vim.v.shell_error ~= 0 or parent[1] == nil then
+    return nil
+  end
+
+  return parent[1]
+end
+
 local DiffView = {
   'sindrets/diffview.nvim',
+  dependencies = {
+    'lukas-reineke/indent-blankline.nvim',
+  },
   config = function()
     local diffview = require 'diffview'
+    local diffview_indent_buffers = {}
+
+    local function is_diffview_indent_hidden(bufnr)
+      for _, buffers in pairs(diffview_indent_buffers) do
+        if buffers[bufnr] then
+          return true
+        end
+      end
+
+      return false
+    end
+
+    local function refresh_indent_guides(bufnr)
+      local ok, ibl = pcall(require, 'ibl')
+      if ok and ibl.initialized then
+        ibl.refresh(bufnr)
+      end
+    end
+
+    local function hide_indent_guides(bufnr)
+      local tabpage = vim.api.nvim_get_current_tabpage()
+      diffview_indent_buffers[tabpage] = diffview_indent_buffers[tabpage] or {}
+      diffview_indent_buffers[tabpage][bufnr] = true
+      refresh_indent_guides(bufnr)
+    end
+
+    local function restore_indent_guides(view)
+      local buffers = diffview_indent_buffers[view.tabpage]
+      diffview_indent_buffers[view.tabpage] = nil
+
+      if buffers == nil then
+        return
+      end
+
+      for bufnr in pairs(buffers) do
+        if vim.api.nvim_buf_is_valid(bufnr) and not is_diffview_indent_hidden(bufnr) then
+          refresh_indent_guides(bufnr)
+        end
+      end
+    end
+
+    local ok, hooks = pcall(require, 'ibl.hooks')
+    if ok then
+      hooks.register(hooks.type.ACTIVE, function(bufnr)
+        return not is_diffview_indent_hidden(bufnr)
+      end)
+    end
 
     local function set_diff_winhl(winid, replacements)
       local parts = {}
@@ -61,11 +154,15 @@ local DiffView = {
       },
       hooks = {
         diff_buf_read = function()
+          hide_indent_guides(vim.api.nvim_get_current_buf())
+
           local fillchars = vim.opt_local.fillchars:get()
           fillchars.diff = ' '
           vim.opt_local.fillchars = fillchars
 
-          vim.opt_local.foldenable = false
+          vim.opt_local.foldenable = true
+          vim.opt_local.foldlevel = 0
+          vim.cmd 'normal! zM'
           vim.opt_local.relativenumber = true
         end,
         diff_buf_win_enter = function(_, winid, ctx)
@@ -108,7 +205,7 @@ local DiffView = {
             end,
           })
         end,
-        view_closed = function() end,
+        view_closed = restore_indent_guides,
       },
     }
 
@@ -136,6 +233,45 @@ local DiffView = {
       -- vim.cmd('!git fetch origin ' .. main)
       vim.cmd('DiffviewOpen origin/' .. main)
     end, { desc = 'Diff against main branch' })
+
+    vim.keymap.set('n', '<leader>gb', function()
+      local main = get_main_branch()
+      local current = get_current_branch()
+      if main == nil or current == nil then
+        vim.notify('No git branch found', vim.log.levels.WARN)
+        return
+      end
+
+      local commits = get_branch_commits(main, current)
+      if commits == nil then
+        vim.notify('Could not list git commits', vim.log.levels.ERROR)
+        return
+      end
+
+      if #commits == 0 then
+        vim.notify('No branch commits found', vim.log.levels.INFO)
+        return
+      end
+
+      vim.ui.select(commits, {
+        prompt = 'Select commit to diff from:',
+        format_item = function(commit)
+          return commit.short_hash .. ' ' .. commit.subject .. ' (' .. commit.relative_date .. ')'
+        end,
+      }, function(commit)
+        if commit == nil then
+          return
+        end
+
+        local parent = get_commit_parent(commit)
+        if parent == nil then
+          vim.notify('Could not find parent commit for ' .. commit.short_hash, vim.log.levels.ERROR)
+          return
+        end
+
+        vim.cmd('DiffviewOpen ' .. parent)
+      end)
+    end, { desc = 'Diff branch since selected commit' })
 
     vim.keymap.set('n', '<leader>gs', function()
       vim.cmd 'DiffviewOpen'
